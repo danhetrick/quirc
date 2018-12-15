@@ -23,3 +23,5 @@ When executed, **Quirc** will connect to the IRC server automatically, and join 
     -a, --action COLOR		Set CTCP action message color (default: green)
     -N, --notice COLOR		Set notice message color (default: purple)
     -f, --font FONT			Set display font (default: "Courier New")
+
+Once up and running, **Quirc** runs like any other graphical IRC client you might have used.  Enter `/help` for a list of commands.
