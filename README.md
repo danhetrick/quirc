@@ -27,6 +27,12 @@ When executed, **Quirc** will connect to the IRC server automatically, and join 
     -N, --notice COLOR		Set notice message color (default: purple)
     -f, --font FONT			Set display font (default: "Courier New")
 
+For a more complex example, let's connect to EFnet, use the nickname `bob`, join channel `#foo`, use "Arial" as the display font, and use the color orange for all system messages:
+
+```bash
+python quirc.py irc.servercentral.net 6667 -n bob --channel "#foo" --font "Arial" -s "orange"
+```
+
 Once up and running, **Quirc** runs like any other graphical IRC client you might have used.
 
 ## Quirc Client Commands
@@ -49,7 +55,7 @@ Right clicking on the user list will show a menu with available commands, as wil
 
 ## Quirc Gadget
 
-**Quirc** can also be ran as a "gadget" (like the discontinued [Windows Desktop Gadgets](https://en.wikipedia.org/wiki/Windows_Desktop_Gadgets)). The application will run without a window title and border, and it will not appear in the task manager; the window can't be moved with the mouse. Optionally, the gadget can appear on top of all other windows, or normally. These command-line arguments are used to configure the Quirc gadget:
+**Quirc** can also be ran as a "gadget" (like the discontinued [Windows Desktop Gadgets](https://en.wikipedia.org/wiki/Windows_Desktop_Gadgets)). The application will run without a window title and border, and it will not appear in the task manager; the window can't be moved with the mouse. Optionally, the gadget can appear on top of all other windows, or normally. These command-line arguments are used to configure the **Quirc** gadget:
 
     -g, --gadget            Run Quirc as a gadget
     -x NUMBER               Gadget's X location
