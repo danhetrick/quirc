@@ -28,3 +28,5 @@ When executed, **Quirc** will connect to the IRC server automatically, and join 
     -f, --font FONT			Set display font (default: "Courier New")
 
 Once up and running, **Quirc** runs like any other graphical IRC client you might have used.  Enter `/help` for a list of commands.
+
+![Quirc Usage](https://github.com/danhetrick/quirc/blob/master/quirc_usage.gif?raw=true)
