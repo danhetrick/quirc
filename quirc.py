@@ -44,14 +44,32 @@ ACTION_COLOR = "green"
 NOTICE_COLOR = "purple"
 CLIENT_FONT = "Courier New"
 
+OPERATOR_COLOR = "green"
+VOICED_COLOR = "blue"
+USER_COLOR = "black"
+
+SCREEN_GADGET = False
+GADGET_X = 0
+GADGET_Y = 0
+GADGET_WIDTH = 600
+GADGET_HEIGHT = 600
+GADGET_ON_TOP = False
+
 # ================================
 # | HANDLE COMMANDLINE ARGUMENTS |
 # ================================
 
 import argparse
-parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser(prog=f"python quirc.py", description=f"{APPLICATION} {VERSION} - {DESCRIPTION}")
 parser.add_argument("server", help="IRC server to connect to")
 parser.add_argument("port", help="IRC port to connect to", type=int)
+
+parser.add_argument("-g","--gadget", help="Run Quirc as a screen gadget", action='store_true')
+parser.add_argument("-x", help="Gadget's X location (default: 0)", type=int)
+parser.add_argument("-y", help="Gadget's Y location (default: 0)", type=int)
+parser.add_argument("-w","--width", help="Gadget's width  (default: 600)", type=int)
+parser.add_argument("-H","--height", help="Gadget's height (default: 600)", type=int)
+parser.add_argument("-t","--ontop", help="Gadget will always be on top", action='store_true')
 
 parser.add_argument("-c","--channel", help="IRC channel to join")
 parser.add_argument("-p","--password", help="IRC channel password to use")
@@ -64,7 +82,7 @@ parser.add_argument("-P","--private", help="Set private message display color (d
 parser.add_argument("-s","--system", help="Set system message display color (default: grey)")
 parser.add_argument("-a","--action", help="Set action message display color (default: green)")
 parser.add_argument("-N","--notice", help="Set notice message display color (default: purple)")
-parser.add_argument("-f","--font", help="Set display for (default: Courier New)")
+parser.add_argument("-f","--font", help="Set display font (default: Courier New)")
 
 args = parser.parse_args()
 SERVER = args.server
@@ -94,6 +112,19 @@ if args.notice:
 if args.font:
 	CLIENT_FONT = args.font
 
+if args.gadget:
+	SCREEN_GADGET = True
+	if args.x:
+		GADGET_X = args.x
+	if args.y:
+		GADGET_Y = args.y
+	if args.width:
+		GADGET_WIDTH = args.width
+	if args.height:
+		GADGET_HEIGHT = args.height
+	if args.ontop:
+		GADGET_ON_TOP = True
+
 # ===================
 # | LIBRARY IMPORTS |
 # ===================
@@ -119,14 +150,14 @@ from PyQt5 import QtCore
 input_height = 20
 output_width = 440
 output_height = 400
-text_x = 10
-user_width = 140
+text_x = 5
+user_width = 150
 user_height = 400
 user_x = text_x + output_width + 10
 input_width = output_width + user_width + 10
 window_width = output_width + user_width + 30
 window_height = output_height + input_height + 30
-text_y = 25
+text_y = 30
 output_y = 5
 
 # =====================
@@ -159,6 +190,16 @@ class Quirc_IRC_Client(QWidget):
 	def __init__(self):
 		super().__init__()
 		self.createQuircUI()
+
+	# Handle window resizing
+	def resizeEvent(self,resizeEvent):
+		rwindow_width = self.width()
+		rwindow_height = self.height()
+		self.user_list.setGeometry(QtCore.QRect(rwindow_width-user_width-10, text_y, user_width, rwindow_height-60))
+		self.channel.setGeometry(QtCore.QRect(rwindow_width-user_width-10, text_y-30, user_width, self.channel.height()))
+		self.chat_display.setGeometry(QtCore.QRect(text_x, text_y, rwindow_width-self.user_list.width()-20, rwindow_height-60))
+		self.topic.setGeometry(QtCore.QRect(text_x, text_y-30, rwindow_width-self.user_list.width()-25, self.topic.height()))
+		self.irc_input.setGeometry(QtCore.QRect(text_x, text_y+self.chat_display.height()+5, rwindow_width-15, input_height))
 
 	def user_input(self):
 		handle_user_input(self,self.irc_input.text())
@@ -219,9 +260,20 @@ class Quirc_IRC_Client(QWidget):
 		self.user_list.setFont(userfont)
 		self.user_list.installEventFilter(self)
 
-		# Window size
-		self.setGeometry(QtCore.QRect(100, 100, window_width, window_height+7))
-		self.setFixedSize(self.size())
+		if SCREEN_GADGET:
+			if GADGET_ON_TOP:
+				self.setWindowFlags(
+					QtCore.Qt.FramelessWindowHint |
+					QtCore.Qt.WindowStaysOnTopHint |
+					QtCore.Qt.Tool
+					)
+			else:
+				self.setWindowFlags(
+					QtCore.Qt.FramelessWindowHint |
+					QtCore.Qt.Tool
+					)
+
+			self.setGeometry(QtCore.QRect(GADGET_X, GADGET_Y, GADGET_WIDTH, GADGET_HEIGHT))
 
 		self.show()
 
@@ -615,6 +667,9 @@ def display_help(obj):
 		write_to_display(obj,"<font style=\"background-color:silver;\"><b>/topic</b> TEXT          -  <i>Sets the current channel's topic</i>")
 		write_to_display(obj,"<font style=\"background-color:silver;\"><b>/key</b> TEXT            -  <i>Sets the current channel's key</i>")
 		write_to_display(obj,"<font style=\"background-color:silver;\"><b>/nokey</b>               -  <i>Unsets the current channel's key</i>")
+	if SCREEN_GADGET:
+		write_to_display(obj,"<font style=\"background-color:silver;\"><b>/move X Y</b>               -  <i>Moves the IRC gadget</i>")
+		write_to_display(obj,"<font style=\"background-color:silver;\"><b>/size WIDTH HEIGHT</b>      -  <i>Resizes the IRC gadget</i>")
 
 def handle_commands(obj,text):
 	tokens = text.split()
@@ -622,6 +677,18 @@ def handle_commands(obj,text):
 	global CHANNEL
 	global I_AM_AWAY
 	global CHANNEL_KEY
+
+	if SCREEN_GADGET:
+		if len(tokens) == 3 and tokens[0] == "/move":
+			new_x = int(tokens[1])
+			new_y = int(tokens[2])
+			obj.move(new_x,new_y)
+			return True
+		if len(tokens) == 3 and tokens[0] == "/size":
+			new_x = int(tokens[1])
+			new_y = int(tokens[2])
+			obj.resize(new_x,new_y)
+			return True
 
 	if len(tokens) >= 1 and tokens[0] == "/help":
 		display_help(obj)

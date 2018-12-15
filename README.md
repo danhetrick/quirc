@@ -27,6 +27,42 @@ When executed, **Quirc** will connect to the IRC server automatically, and join 
     -N, --notice COLOR		Set notice message color (default: purple)
     -f, --font FONT			Set display font (default: "Courier New")
 
-Once up and running, **Quirc** runs like any other graphical IRC client you might have used.  Enter `/help` for a list of commands.
+Once up and running, **Quirc** runs like any other graphical IRC client you might have used.
+
+## Quirc Client Commands
+
+    /nick NICKNAME          Changes the client's nickname
+    /msg TARGET MESSAGE     Sends a private or channel message
+    /me ACTION              Sends a CTCP action message
+    /join CHANNEL [KEY]     Joins a channel
+    /away [MESSAGE]         Sets status to "away"
+    /back                   Sets status to "back"
+    /quit [MESSAGE]         Disconnects from IRC and quits
+
+If the client has operator status, there are three more commands available:
+
+    /topic TEXT             Sets the channel's topic
+    /key TEXT               Sets the channel's key
+    /nokey                  Removes a channel's key
+
+Right clicking on the user list will show a menu with available commands, as will right clicking on the channel name (at the top right of the window) or the topic display (at the top left).
+
+## Quirc Gadget
+
+**Quirc** can also be ran as a "gadget" (like the discontinued (Windows Desktop Gadgets)[https://en.wikipedia.org/wiki/Windows_Desktop_Gadgets]). The application will run without a window title and border, and it will not appear in the task manager; the window can't be moved with the mouse. Optionally, the gadget can appear on top of all other windows, or normally. These command-line arguments are used to configure the Quirc gadget:
+
+    -g, --gadget            Run Quirc as a gadget
+    -x NUMBER               Gadget's X location
+    -y NUMBER               Gadget's Y location
+    -w, --width NUMBER      Gadget's width
+    -H, --height NUMBER     Gadget's height
+    -t, --ontop             Gadget will always be on top of other windows
+
+When running as a gadget, **Quirc** adds a couple of client commands to change the gadget at runtime:
+
+    /move X_VALUE Y_VALUE   Moves the Quirc gadget
+    /size WIDTH HEIGHT      Resizes the Quirc gadget
+
+To close the gadget, use the `/quit` command.
 
 ![Quirc Usage](https://github.com/danhetrick/quirc/blob/master/quirc_usage.gif?raw=true)
