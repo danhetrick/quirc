@@ -34,7 +34,7 @@ Once up and running, **Quirc** runs like any other graphical IRC client you migh
     /nick NICKNAME          Changes the client's nickname
     /msg TARGET MESSAGE     Sends a private or channel message
     /me ACTION              Sends a CTCP action message
-    /join CHANNEL [KEY]     Joins a channel
+    /join CHANNEL [KEY]     Joins a new channel, and leaves the current one
     /away [MESSAGE]         Sets status to "away"
     /back                   Sets status to "back"
     /quit [MESSAGE]         Disconnects from IRC and quits
