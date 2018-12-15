@@ -49,7 +49,7 @@ Right clicking on the user list will show a menu with available commands, as wil
 
 ## Quirc Gadget
 
-**Quirc** can also be ran as a "gadget" (like the discontinued (Windows Desktop Gadgets)[https://en.wikipedia.org/wiki/Windows_Desktop_Gadgets]). The application will run without a window title and border, and it will not appear in the task manager; the window can't be moved with the mouse. Optionally, the gadget can appear on top of all other windows, or normally. These command-line arguments are used to configure the Quirc gadget:
+**Quirc** can also be ran as a "gadget" (like the discontinued [Windows Desktop Gadgets](https://en.wikipedia.org/wiki/Windows_Desktop_Gadgets)). The application will run without a window title and border, and it will not appear in the task manager; the window can't be moved with the mouse. Optionally, the gadget can appear on top of all other windows, or normally. These command-line arguments are used to configure the Quirc gadget:
 
     -g, --gadget            Run Quirc as a gadget
     -x NUMBER               Gadget's X location
