@@ -16,7 +16,7 @@ When executed, **Quirc** will connect to the IRC server automatically, and join 
     -u, --username USERNAME		Set username (default: quirc)
     -c, --channel CHANNEL		Set initial channel (default: #quirc)
     -d, --default CHANNEL		Set default channel (default: #quirc)
-    -p, --password KEY      Key required to join channel
+    -p, --password KEY          Key required to join channel
     -C, --chat COLOR		Set chat display color (default: blue)
     -P, --private COLOR		Set private message color (default: red)
     -s, --system COLOR		Set system message color (default: grey)
