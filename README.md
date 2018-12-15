@@ -5,6 +5,9 @@ A Python/Qt5 IRC client
 
     pip install pyqt5
     pip install Twisted
+
+**Quirc** was written and tested under Windows, and should run in any other OS that supports Python 3, Qt5, and Twisted.
+
 ## Usage
 **Quirc** is a single channel IRC client. It takes two required command-line arguments, the server and port of the IRC server to connect to. So, to connect to EFnet, you could use:
 
