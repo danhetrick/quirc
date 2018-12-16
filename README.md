@@ -43,6 +43,8 @@ Once up and running, **Quirc** runs like any other graphical IRC client you migh
     /join CHANNEL [KEY]     Joins a new channel, and leaves the current one
     /away [MESSAGE]         Sets status to "away"
     /back                   Sets status to "back"
+    /invite NICK CHANNEL    Invites a user to a channel
+    /raw MESSAGE            Sends an unaltered message to the IRC server
     /quit [MESSAGE]         Disconnects from IRC and quits
 
 If the client has operator status, there are three more commands available:
