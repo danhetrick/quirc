@@ -164,6 +164,8 @@ output_y = 5
 # | RUN TIME SETTINGS |
 # =====================
 
+CHANNEL_USER_LIST = []
+
 PUBLIC_MESSAGE_SYMBOL = f"<font color=\"{PUBLIC_MESSAGE_COLOR}\">&#9679;</font> "
 SYSTEM_MESSAGE_SYMBOL = f"<font color=\"{SYSTEM_MESSAGE_COLOR}\">&#9679;</font> "
 PRIVATE_MESSAGE_SYMBOL = f"<font color=\"{PRIVATE_MESSAGE_COLOR}\">&#9679;</font> "
@@ -221,7 +223,7 @@ class Quirc_IRC_Client(QWidget):
 
 		# Channel name display
 		self.channel = QLabel(self)
-		self.channel.setText(f"{CHANNEL}")
+		self.channel.setText(" ")
 		self.channel.move(user_x,0)
 		self.channel.setFont(channel_and_topic_font)
 		self.channel.setGeometry(QtCore.QRect(self.channel.x(), self.channel.y(), user_width, self.channel.height()))
@@ -385,7 +387,7 @@ class Quirc_IRC_Client(QWidget):
 
 				if action == kickAct:
 					bot.kick(CHANNEL,target)
-					bot.sendLine("NAMES %s" % CHANNEL)
+					fetch_userlist(bot)
 					return True
 
 				if action == unopAct:
@@ -484,7 +486,7 @@ class QuircClientConnection(irc.IRCClient):
 
 	def joined(self, channel):
 		ircform.channel.setText(f"{channel}")
-		self.sendLine("NAMES %s" % channel)
+		fetch_userlist(self)
 		system_msg_display(ircform,f"Joined {channel}")
 
 	def privmsg(self, user, target, msg):
@@ -521,20 +523,20 @@ class QuircClientConnection(irc.IRCClient):
 			if set:
 				for u in args:
 					system_msg_display(ircform,f"{pnick} gave {u} operator status")
-					self.sendLine("NAMES %s" % channel)
+					fetch_userlist(self)
 			else:
 				for u in args:
 					system_msg_display(ircform,f"{pnick} took operator status from {u}")
-					self.sendLine("NAMES %s" % channel)
+					fetch_userlist(self)
 		if 'v' in modes:
 			if set:
 				for u in args:
 					system_msg_display(ircform,f"{pnick} gave {u} voiced status")
-					self.sendLine("NAMES %s" % channel)
+					fetch_userlist(self)
 			else:
 				for u in args:
 					system_msg_display(ircform,f"{pnick} took voiced status from {u}")
-					self.sendLine("NAMES %s" % channel)
+					fetch_userlist(self)
 		if 'p' in modes:
 			if set:
 				system_msg_display(ircform,f"{pnick} set channel status to private")
@@ -559,25 +561,26 @@ class QuircClientConnection(irc.IRCClient):
 
 	def userQuit(self, user, quitMessage):
 		system_msg_display(ircform,f"{user} quit IRC {quitMessage}")
-		self.sendLine("NAMES %s" % CHANNEL)
+		fetch_userlist(self)
 
 	def userJoined(self, user, channel):
 		system_msg_display(ircform,f"{user} joined {channel}")
-		self.sendLine("NAMES %s" % channel)
+		fetch_userlist(self)
 
 	def userLeft(self, user, channel):
 		system_msg_display(ircform,f"{user} left {channel}")
-		self.sendLine("NAMES %s" % channel)
+		fetch_userlist(self)
 
 	def afterCollideNick(self, nickname):
 		global NICKNAME
 		NICKNAME = nickname + random.randint(100, 999)
 		system_msg_display(ircform,f"Nickname is now {NICKNAME}")
+		fetch_userlist(self)
 		return NICKNAME
 
 	def userRenamed(self, oldname, newname):
 		system_msg_display(ircform,f"User {oldname} changed their nick to {newname}")
-		self.sendLine("NAMES %s" % CHANNEL)
+		fetch_userlist(self)
 
 	def topicUpdated(self, user, channel, newTopic):
 		global TOPIC
@@ -603,13 +606,11 @@ class QuircClientConnection(irc.IRCClient):
 	def irc_RPL_NAMREPLY(self, prefix, params):
 		channel = params[2].lower()
 		nicklist = params[3].split(' ')
-		empty_userlist(ircform)
 		for nick in nicklist:
-			add_to_user_list(ircform,nick)
+			CHANNEL_USER_LIST.append(nick)
 
 	def irc_RPL_ENDOFNAMES(self, prefix, params):
-		ulist = get_userlist(ircform)
-		ulist = sort_nicks(ulist)
+		ulist = sort_nicks(CHANNEL_USER_LIST)
 		empty_userlist(ircform)
 		for nick in ulist:
 			add_to_user_list(ircform,nick)
@@ -649,6 +650,11 @@ class QuircConnectionFactory(protocol.ClientFactory):
 
 	def clientConnectionFailed(self, connector, reason):
 		pass
+
+def fetch_userlist(irc_obj):
+	global CHANNEL_USER_LIST
+	CHANNEL_USER_LIST = []
+	irc_obj.sendLine("NAMES %s" % CHANNEL)
 
 # =====================
 # | SUPPORT FUNCTIONS |
@@ -770,7 +776,7 @@ def handle_commands(obj,text):
 	if len(tokens) == 2 and tokens[0] == "/nick":
 		NICKNAME = tokens[1]
 		bot.setNick(NICKNAME)
-		bot.sendLine("NAMES %s" % CHANNEL)
+		fetch_userlist(bot)
 		system_msg_display(obj,f"You are now known as {NICKNAME}")
 		return True
 
@@ -788,6 +794,7 @@ def handle_commands(obj,text):
 		if len(tokens) == 2:
 			bot.part(CHANNEL)
 			CHANNEL = tokens[1]
+			obj.channel.setText(" ")
 			bot.join(CHANNEL)
 		elif len(tokens) > 2:
 			tokens.pop(0)
@@ -795,6 +802,7 @@ def handle_commands(obj,text):
 			CHANNEL = tokens[0]
 			tokens.pop(0)
 			cKey = " ".join(tokens)
+			obj.channel.setText(" ")
 			bot.join(CHANNEL,key=cKey)
 		return True
 
@@ -876,6 +884,9 @@ def write_to_display( obj, text ):
 	obj.chat_display.append(text)
 
 def add_to_user_list( obj, text ):
+	items = obj.user_list.findItems(text,Qt.MatchExactly)
+	if len(items) > 0:
+		return
 	obj.user_list.addItem(text)
 
 def empty_userlist( obj ):
