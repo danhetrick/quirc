@@ -37,23 +37,23 @@ USERNAME = "quirc"
 # | IRC CLIENT SETTINGS |
 # =======================
 
-CHAT_COLOR = "blue"
-PRIVATE_COLOR = "red"
-SYSTEM_COLOR = "grey"
-ACTION_COLOR = "green"
-NOTICE_COLOR = "purple"
+PUBLIC_MESSAGE_COLOR = "blue"
+PRIVATE_MESSAGE_COLOR = "red"
+SYSTEM_MESSAGE_COLOR = "grey"
+CTCP_ACTION_MESSAGE_COLOR = "green"
+NOTICE_MESSAGE_COLOR = "purple"
 CLIENT_FONT = "Courier New"
 
 OPERATOR_COLOR = "green"
 VOICED_COLOR = "blue"
 USER_COLOR = "black"
 
-SCREEN_GADGET = False
+RUN_IN_GADGET_MODE = False
 GADGET_X = 0
 GADGET_Y = 0
 GADGET_WIDTH = 600
 GADGET_HEIGHT = 600
-GADGET_ON_TOP = False
+GADGET_ALWAYS_ON_TOP = False
 
 # ================================
 # | HANDLE COMMANDLINE ARGUMENTS |
@@ -100,20 +100,20 @@ if args.default:
 	DEFAULT_CHANNEL = args.default
 
 if args.chat:
-	CHAT_COLOR = args.chat
+	PUBLIC_MESSAGE_COLOR = args.chat
 if args.private:
-	PRIVATE_COLOR = args.private
+	PRIVATE_MESSAGE_COLOR = args.private
 if args.system:
-	SYSTEM_COLOR = args.system
+	SYSTEM_MESSAGE_COLOR = args.system
 if args.action:
-	ACTION_COLOR = args.action
+	CTCP_ACTION_MESSAGE_COLOR = args.action
 if args.notice:
-	NOTICE_COLOR = args.notice
+	NOTICE_MESSAGE_COLOR = args.notice
 if args.font:
 	CLIENT_FONT = args.font
 
 if args.gadget:
-	SCREEN_GADGET = True
+	RUN_IN_GADGET_MODE = True
 	if args.x:
 		GADGET_X = args.x
 	if args.y:
@@ -123,7 +123,7 @@ if args.gadget:
 	if args.height:
 		GADGET_HEIGHT = args.height
 	if args.ontop:
-		GADGET_ON_TOP = True
+		GADGET_ALWAYS_ON_TOP = True
 
 # ===================
 # | LIBRARY IMPORTS |
@@ -150,7 +150,7 @@ from PyQt5 import QtCore
 input_height = 20
 output_width = 440
 output_height = 400
-text_x = 5
+text_x = 10
 user_width = 150
 user_height = 400
 user_x = text_x + output_width + 10
@@ -164,13 +164,13 @@ output_y = 5
 # | RUN TIME SETTINGS |
 # =====================
 
-CHAT_SYMBOL = f"<font color=\"{CHAT_COLOR}\">&#9679;</font> "
-SYSTEM_SYMBOL = f"<font color=\"{SYSTEM_COLOR}\">&#9679;</font> "
-PRIVATE_MSG_SYMBOL = f"<font color=\"{PRIVATE_COLOR}\">&#9679;</font> "
-NOTICE_SYMBOL = f"<font color=\"{NOTICE_COLOR}\">&#9679;</font> "
+PUBLIC_MESSAGE_SYMBOL = f"<font color=\"{PUBLIC_MESSAGE_COLOR}\">&#9679;</font> "
+SYSTEM_MESSAGE_SYMBOL = f"<font color=\"{SYSTEM_MESSAGE_COLOR}\">&#9679;</font> "
+PRIVATE_MESSAGE_SYMBOL = f"<font color=\"{PRIVATE_MESSAGE_COLOR}\">&#9679;</font> "
+NOTICE_MESSAGE_SYMBOL = f"<font color=\"{NOTICE_MESSAGE_COLOR}\">&#9679;</font> "
 
-I_AM_OP = False
-I_AM_AWAY = False
+CLIENT_IS_OPERATOR = False
+CLIENT_IS_AWAY = False
 TOPIC = "No topic"
 CHANNEL_KEY = CHANNEL_PASSWORD
 
@@ -199,7 +199,7 @@ class Quirc_IRC_Client(QWidget):
 		self.channel.setGeometry(QtCore.QRect(rwindow_width-user_width-10, text_y-30, user_width, self.channel.height()))
 		self.chat_display.setGeometry(QtCore.QRect(text_x, text_y, rwindow_width-self.user_list.width()-20, rwindow_height-60))
 		self.topic.setGeometry(QtCore.QRect(text_x, text_y-30, rwindow_width-self.user_list.width()-25, self.topic.height()))
-		self.irc_input.setGeometry(QtCore.QRect(text_x, text_y+self.chat_display.height()+5, rwindow_width-15, input_height))
+		self.irc_input.setGeometry(QtCore.QRect(text_x, text_y+self.chat_display.height()+5, rwindow_width-20, input_height))
 
 	def user_input(self):
 		handle_user_input(self,self.irc_input.text())
@@ -216,14 +216,14 @@ class Quirc_IRC_Client(QWidget):
 		self.setWindowTitle("Disconnected")
 
 		font = QFont(CLIENT_FONT, 10)
-		channel_info_font = QFont(CLIENT_FONT, 15, QFont.Bold)
+		channel_and_topic_font = QFont(CLIENT_FONT, 10, QFont.Bold)
 		userfont = QFont(CLIENT_FONT, 10, QFont.Bold)
 
 		# Channel name display
 		self.channel = QLabel(self)
 		self.channel.setText(f"{CHANNEL}")
 		self.channel.move(user_x,0)
-		self.channel.setFont(channel_info_font)
+		self.channel.setFont(channel_and_topic_font)
 		self.channel.setGeometry(QtCore.QRect(self.channel.x(), self.channel.y(), user_width, self.channel.height()))
 		self.channel.installEventFilter(self)
 
@@ -231,7 +231,7 @@ class Quirc_IRC_Client(QWidget):
 		self.topic = QLabel(self)
 		self.topic.setText(f"{TOPIC}")
 		self.topic.move(text_x,0)
-		self.topic.setFont(channel_info_font)
+		self.topic.setFont(channel_and_topic_font)
 		self.topic.setGeometry(QtCore.QRect(self.topic.x(), self.topic.y(), output_width, self.topic.height()))
 		self.topic.installEventFilter(self)
 		
@@ -260,8 +260,8 @@ class Quirc_IRC_Client(QWidget):
 		self.user_list.setFont(userfont)
 		self.user_list.installEventFilter(self)
 
-		if SCREEN_GADGET:
-			if GADGET_ON_TOP:
+		if RUN_IN_GADGET_MODE:
+			if GADGET_ALWAYS_ON_TOP:
 				self.setWindowFlags(
 					QtCore.Qt.FramelessWindowHint |
 					QtCore.Qt.WindowStaysOnTopHint |
@@ -281,12 +281,12 @@ class Quirc_IRC_Client(QWidget):
 	def eventFilter(self, source, event):
 		global CHANNEL
 		global bot
-		global I_AM_OP
+		global CLIENT_IS_OPERATOR
 
 		if (event.type() == QtCore.QEvent.ContextMenu and
 				source is self.channel):
 
-			if I_AM_OP:
+			if CLIENT_IS_OPERATOR:
 				menu = QMenu()
 				addKey = menu.addAction('Set channel key')
 				removeKey = menu.addAction('Remove channel key')
@@ -345,6 +345,7 @@ class Quirc_IRC_Client(QWidget):
 				source is self.topic):
 			menu = QMenu()
 			setTopic = menu.addAction('Set Topic')
+			copyTopic = menu.addAction('Copy topic to clipboard')
 			action = menu.exec_(self.topic.mapToGlobal(event.pos()))
 
 			if action == setTopic:
@@ -352,7 +353,13 @@ class Quirc_IRC_Client(QWidget):
 					self.irc_input.setFocus()
 					return True
 
-		if I_AM_OP:
+			if action == copyTopic:
+					cb = QApplication.clipboard()
+					cb.clear(mode=cb.Clipboard )
+					cb.setText(TOPIC, mode=cb.Clipboard)
+					return True
+
+		if CLIENT_IS_OPERATOR:
 			if (event.type() == QtCore.QEvent.ContextMenu and
 				source is self.user_list):
 
@@ -368,6 +375,8 @@ class Quirc_IRC_Client(QWidget):
 				menu.addSeparator()
 				msgAct = menu.addAction('Send message')
 				noticeAct = menu.addAction('Send notice')
+				menu.addSeparator()
+				copyAct = menu.addAction('Copy users to clipboard')
 				action = menu.exec_(self.user_list.mapToGlobal(event.pos()))
 
 				target = item.text()
@@ -404,6 +413,13 @@ class Quirc_IRC_Client(QWidget):
 					self.irc_input.setText(f"/notice {target} ")
 					self.irc_input.setFocus()
 					return True
+
+				if action == copyAct:
+					ulist = get_userlist(self)
+					cb = QApplication.clipboard()
+					cb.clear(mode=cb.Clipboard )
+					cb.setText(' '.join(ulist), mode=cb.Clipboard)
+					return True
 		else:
 			if (event.type() == QtCore.QEvent.ContextMenu and
 				source is self.user_list):
@@ -414,6 +430,8 @@ class Quirc_IRC_Client(QWidget):
 				menu = QMenu()
 				msgAct = menu.addAction('Send message')
 				noticeAct = menu.addAction('Send notice')
+				menu.addSeparator()
+				copyAct = menu.addAction('Copy users to clipboard')
 				action = menu.exec_(self.user_list.mapToGlobal(event.pos()))
 
 				target = item.text()
@@ -428,6 +446,13 @@ class Quirc_IRC_Client(QWidget):
 				if action == noticeAct:
 					self.irc_input.setText(f"/notice {target} ")
 					self.irc_input.setFocus()
+					return True
+
+				if action == copyAct:
+					ulist = get_userlist(self)
+					cb = QApplication.clipboard()
+					cb.clear(mode=cb.Clipboard )
+					cb.setText(' '.join(ulist), mode=cb.Clipboard)
 					return True
 
 		return super(Quirc_IRC_Client, self).eventFilter(source, event)
@@ -630,8 +655,8 @@ class QuircConnectionFactory(protocol.ClientFactory):
 # =====================
 
 def sort_nicks(nicklist):
-	global I_AM_OP
-	I_AM_OP = False
+	global CLIENT_IS_OPERATOR
+	CLIENT_IS_OPERATOR = False
 	global NICKNAME
 	ops = []
 	voiced = []
@@ -640,7 +665,7 @@ def sort_nicks(nicklist):
 	meop = f"@{NICKNAME}"
 	for nick in nicklist:
 		if nick == meop:
-			I_AM_OP = True
+			CLIENT_IS_OPERATOR = True
 		if '@' in nick:
 			ops.append(nick)
 		elif '+' in nick:
@@ -662,12 +687,14 @@ def display_help(obj):
 	write_to_display(obj,"<font style=\"background-color:silver;\"><b>/join</b> CHANNEL [KEY]  -  <i>Joins a new channel</i>")
 	write_to_display(obj,"<font style=\"background-color:silver;\"><b>/away</b> [MESSAGE]      -  <i>Sets status to away</i>")
 	write_to_display(obj,"<font style=\"background-color:silver;\"><b>/back</b>                -  <i>Sets status to back</i>")
+	write_to_display(obj,"<font style=\"background-color:silver;\"><b>/invite</b> NICKNAME CHANNEL      -  <i>Sends a channel invitation</i>")
 	write_to_display(obj,"<font style=\"background-color:silver;\"><b>/quit</b> [MESSAGE]      -  <i>Quits IRC</i>")
-	if I_AM_OP:
+	write_to_display(obj,"<font style=\"background-color:silver;\"><b>/raw</b> [MESSAGE]      -  <i>Sends an unaltered message to the server</i>")
+	if CLIENT_IS_OPERATOR:
 		write_to_display(obj,"<font style=\"background-color:silver;\"><b>/topic</b> TEXT          -  <i>Sets the current channel's topic</i>")
 		write_to_display(obj,"<font style=\"background-color:silver;\"><b>/key</b> TEXT            -  <i>Sets the current channel's key</i>")
 		write_to_display(obj,"<font style=\"background-color:silver;\"><b>/nokey</b>               -  <i>Unsets the current channel's key</i>")
-	if SCREEN_GADGET:
+	if RUN_IN_GADGET_MODE:
 		write_to_display(obj,"<font style=\"background-color:silver;\"><b>/move X Y</b>               -  <i>Moves the IRC gadget</i>")
 		write_to_display(obj,"<font style=\"background-color:silver;\"><b>/size WIDTH HEIGHT</b>      -  <i>Resizes the IRC gadget</i>")
 
@@ -675,10 +702,17 @@ def handle_commands(obj,text):
 	tokens = text.split()
 	global NICKNAME
 	global CHANNEL
-	global I_AM_AWAY
+	global CLIENT_IS_AWAY
 	global CHANNEL_KEY
 
-	if SCREEN_GADGET:
+	if len(tokens) == 3 and tokens[0] == "/invite":
+		target = tokens[1]
+		chan = tokens[2]
+		bot.sendLine(f"INVITE {target} {chan}")
+		system_msg_display(obj,f"Invitation to {chan} sent to {target}")
+		return True
+
+	if RUN_IN_GADGET_MODE:
 		if len(tokens) == 3 and tokens[0] == "/move":
 			new_x = int(tokens[1])
 			new_y = int(tokens[2])
@@ -695,9 +729,9 @@ def handle_commands(obj,text):
 		return True
 
 	if len(tokens) == 1 and tokens[0] == "/back":
-		if I_AM_AWAY:
+		if CLIENT_IS_AWAY:
 			bot.back()
-			I_AM_AWAY = False
+			CLIENT_IS_AWAY = False
 			system_msg_display(obj,"Status set to 'back'")
 		else:
 			system_msg_display(obj,"Status is not set to 'away'")
@@ -705,25 +739,25 @@ def handle_commands(obj,text):
 
 	if len(tokens) >= 1 and tokens[0] == "/away":
 		if len(tokens) > 1:
-			if I_AM_AWAY:
+			if CLIENT_IS_AWAY:
 				bot.back()
-				I_AM_AWAY = False
+				CLIENT_IS_AWAY = False
 				system_msg_display(obj,"Status set to 'back'")
 			else:
 				tokens.pop(0)
 				MSG = " ".join(tokens)
 				bot.away(message=MSG)
-				I_AM_AWAY = True
+				CLIENT_IS_AWAY = True
 				system_msg_display(obj,f"Status set to 'away' ({MSG})")
 			return True
 		else:
-			if I_AM_AWAY:
+			if CLIENT_IS_AWAY:
 				bot.back()
-				I_AM_AWAY = False
+				CLIENT_IS_AWAY = False
 				system_msg_display(obj,"Status set to 'back'")
 			else:
 				bot.away()
-				I_AM_AWAY = True
+				CLIENT_IS_AWAY = True
 				system_msg_display(obj,"Status set to 'away'")
 			return True
 
@@ -780,7 +814,7 @@ def handle_commands(obj,text):
 		return True
 
 	if len(tokens) >= 2 and tokens[0] == "/topic":
-		if not I_AM_OP:
+		if not CLIENT_IS_OPERATOR:
 			system_msg_display(obj,"Only operators can change the channel topic")
 			return True
 		tokens.pop(0)
@@ -797,7 +831,7 @@ def handle_commands(obj,text):
 		return True
 
 	if len(tokens) >= 2 and tokens[0] == "/key":
-		if not I_AM_OP:
+		if not CLIENT_IS_OPERATOR:
 			system_msg_display(obj,"Only operators can set a channel key")
 			return True
 		tokens.pop(0)
@@ -808,7 +842,7 @@ def handle_commands(obj,text):
 		return True
 
 	if len(tokens) >= 1 and tokens[0] == "/nokey":
-		if not I_AM_OP:
+		if not CLIENT_IS_OPERATOR:
 			system_msg_display(obj,"Only operators can remove a channel key")
 			return True
 		bot.mode(CHANNEL,False,"k",user=f"{CHANNEL_KEY}")
@@ -824,19 +858,19 @@ def handle_user_input( obj, text ):
 	bot.msg(CHANNEL,text,length=450)
 
 def private_msg_display( obj, user, text ):
-	obj.chat_display.append(f"{PRIVATE_MSG_SYMBOL}<b><font color={PRIVATE_COLOR}>{user}</font>  </b>{text}\n")
+	obj.chat_display.append(f"{PRIVATE_MESSAGE_SYMBOL}<b><font color={PRIVATE_MESSAGE_COLOR}>{user}</font>  </b>{text}\n")
 
 def chat_msg_display( obj, user, text ):
-	obj.chat_display.append(f"{CHAT_SYMBOL}<font color={CHAT_COLOR}><b>{user}</b></font>  {text}\n")
+	obj.chat_display.append(f"{PUBLIC_MESSAGE_SYMBOL}<font color={PUBLIC_MESSAGE_COLOR}><b>{user}</b></font>  {text}\n")
 
 def system_msg_display( obj, text ):
-	obj.chat_display.append(f"<b>{SYSTEM_SYMBOL}<i><font color={SYSTEM_COLOR}> {text}</i></b></font>\n")
+	obj.chat_display.append(f"<b>{SYSTEM_MESSAGE_SYMBOL}<i><font color={SYSTEM_MESSAGE_COLOR}> {text}</i></b></font>\n")
 
 def notice_msg_display( obj, user, text ):
-	obj.chat_display.append(f"<b>{NOTICE_SYMBOL}<i><font color={NOTICE_COLOR}> {user}</i></b></font>  {text}\n")
+	obj.chat_display.append(f"<b>{NOTICE_MESSAGE_SYMBOL}<i><font color={NOTICE_MESSAGE_COLOR}> {user}</i></b></font>  {text}\n")
 
 def action_msg_display( obj, user, text ):
-	obj.chat_display.append(f"<b><font color={ACTION_COLOR}>{CHAT_SYMBOL}<i> {user} {text}</font></i></b>\n")
+	obj.chat_display.append(f"<b><font color={CTCP_ACTION_MESSAGE_COLOR}>{PUBLIC_MESSAGE_SYMBOL}<i> {user} {text}</font></i></b>\n")
 
 def write_to_display( obj, text ):
 	obj.chat_display.append(text)
