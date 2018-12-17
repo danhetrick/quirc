@@ -9,34 +9,29 @@ A Python/Qt5 IRC client
 **Quirc** was written and tested under Windows, and should run in any other OS that supports Python 3, Qt5, and Twisted.
 
 ## Usage
-**Quirc** is a single channel IRC client. It takes two required command-line arguments, the server and port of the IRC server to connect to. So, to connect to EFnet, you could use:
-
-    python quirc.py irc.servercentral.net 6667
-When executed, **Quirc** will connect to the IRC server automatically, and join the default channel, `#quirc`, once connected. To change what channel to join on connection, and a whole bunch of other stuff, use command-line options:
+**Quirc** is a single channel IRC client. It takes no mandatory command-line arguments. Once **Quirc** is up and running, use the `/connect` command to connect to an IRC server. Optional command-line options are available:
 
     -h, --help			Display usage text
+    -s, --server HOST       IRC server to connect to
+    -P, --port NUMBER       IRC server port to connect to
     -n, --nick NICKNAME		Set nickname (default: quirc)
     -u, --username USERNAME		Set username (default: quirc)
     -c, --channel CHANNEL		Set initial channel (default: #quirc)
     -d, --default CHANNEL		Set default channel (default: #quirc)
     -p, --password KEY              Key required to join channel
-    -C, --chat COLOR		Set chat display color (default: blue)
-    -P, --private COLOR		Set private message color (default: red)
-    -s, --system COLOR		Set system message color (default: grey)
-    -a, --action COLOR		Set CTCP action message color (default: green)
-    -N, --notice COLOR		Set notice message color (default: purple)
     -f, --font FONT			Set display font (default: "Courier New")
 
-For a more complex example, let's connect to EFnet, use the nickname `bob`, join channel `#foo`, use "Arial" as the display font, and use the color orange for all system messages:
+For a more complex example, let's connect to EFnet, use the nickname `bob`, join channel `#foo`, and use "Arial" as the display font:
 
 ```bash
-python quirc.py irc.servercentral.net 6667 -n bob --channel "#foo" --font "Arial" -s "orange"
+python quirc.py --server irc.servercentral.net --port 6667 -n bob --channel "#foo" --font "Arial" -s "orange"
 ```
 
 Once up and running, **Quirc** runs like any other graphical IRC client you might have used.
 
 ## Quirc Client Commands
 
+    /connect SERVER PORT    Connects to an IRC server
     /nick NICKNAME          Changes the client's nickname
     /msg TARGET MESSAGE     Sends a private or channel message
     /me ACTION              Sends a CTCP action message
@@ -44,8 +39,10 @@ Once up and running, **Quirc** runs like any other graphical IRC client you migh
     /away [MESSAGE]         Sets status to "away"
     /back                   Sets status to "back"
     /invite NICK CHANNEL    Invites a user to a channel
+    /whois USER             Request WHOIS information from the server
     /raw MESSAGE            Sends an unaltered message to the IRC server
-    /quit [MESSAGE]         Disconnects from IRC and quits
+    /quit [MESSAGE]         Disconnects from IRC server
+    /exit                   Disconnects from IRC server and exits **Quirc**
 
 If the client has operator status, there are three more commands available:
 
