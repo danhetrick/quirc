@@ -12,8 +12,8 @@ A Python/Qt5 IRC client
 **Quirc** is a single channel IRC client. It takes no mandatory command-line arguments. Once **Quirc** is up and running, use the `/connect` command to connect to an IRC server. Optional command-line options are available:
 
     -h, --help			Display usage text
-    -s, --server HOST           IRC server to connect to
-    -P, --port NUMBER           IRC server port to connect to
+    -s, --server HOST               IRC server to connect to
+    -P, --port NUMBER               IRC server port to connect to
     -n, --nick NICKNAME		Set nickname (default: quirc)
     -u, --username USERNAME		Set username (default: quirc)
     -c, --channel CHANNEL		Set initial channel (default: #quirc)
