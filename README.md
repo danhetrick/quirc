@@ -30,7 +30,7 @@ Once up and running, **Quirc** runs like any other graphical IRC client you migh
 ## Quirc Client Commands
 
     /connect SERVER PORT    Connects to an IRC server
-    /ssl SERVER PORT        Connects to an IRC server via SSL (requires --ssl option)
+    /ssl SERVER PORT        Connects to an IRC server via SSL (requires pyOpenSSL)
     /nick NICKNAME          Changes the client's nickname
     /msg TARGET MESSAGE     Sends a private or channel message
     /me ACTION              Sends a CTCP action message
