@@ -25,7 +25,7 @@ If pyOpenSSL is not installed, SSL connections will not be possible; only comman
     -d, --default CHANNEL		Set default channel (default: #quirc)
     -p, --password KEY              Key required to join channel
     -f, --font FONT			Set display font (default: "Courier New")
-    -C, --highcontrast      Quirc will use a high contrast color set
+    -C, --highcontrast          Quirc will use a high contrast color set
 
 Once up and running, **Quirc** runs like any other graphical IRC client you might have used.
 
