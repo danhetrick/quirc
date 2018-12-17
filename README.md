@@ -43,7 +43,7 @@ Once up and running, **Quirc** runs like any other graphical IRC client you migh
     /whois USER             Request WHOIS information from the server
     /raw MESSAGE            Sends an unaltered message to the IRC server
     /quit [MESSAGE]         Disconnects from IRC server
-    /exit                   Disconnects from IRC server and exits **Quirc**
+    /exit                   Disconnects from IRC server and exits Quirc
 
 If the client has operator status, there are three more commands available:
 
