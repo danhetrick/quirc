@@ -48,6 +48,10 @@ GADGET_ALWAYS_ON_TOP = False
 
 IRC_SSL = True
 
+WINDOW_TITLE = "Disconnected"
+
+HIGH_CONTRAST = False
+
 # ================================
 # | HANDLE COMMANDLINE ARGUMENTS |
 # ================================
@@ -69,6 +73,7 @@ parser.add_argument("-u","--username", help="Username to use (default: quirc)")
 parser.add_argument("-d","--default", help="Set default channel (default: #quirc)")
 
 parser.add_argument("-f","--font", help="Set display font (default: Courier New)")
+parser.add_argument("-C","--highcontrast", help="Run Quirc in high contrast mode", action='store_true')
 
 args = parser.parse_args()
 
@@ -85,6 +90,9 @@ if args.default:
 
 if args.font:
 	CLIENT_FONT = args.font
+
+if args.highcontrast:
+	HIGH_CONTRAST = True
 
 if args.gadget:
 	RUN_IN_GADGET_MODE = True
@@ -104,6 +112,7 @@ if args.gadget:
 # ===================
 
 import sys
+import random
 from datetime import datetime, timedelta
 
 from PyQt5.QtWidgets import *
@@ -161,6 +170,12 @@ CTCP_ACTION_MESSAGE_COLOR = "green"
 NOTICE_MESSAGE_COLOR = "purple"
 WHOIS_MESSAGE_COLOR = "orange"
 ERROR_MESSAGE_COLOR = "red"
+
+if HIGH_CONTRAST:
+	PUBLIC_MESSAGE_COLOR = "aqua"
+	SYSTEM_MESSAGE_COLOR = "silver"
+	NOTICE_MESSAGE_COLOR = "fuchsia"
+	CTCP_ACTION_MESSAGE_COLOR = "lime"
 
 PUBLIC_MESSAGE_SYMBOL = f"<font color=\"{PUBLIC_MESSAGE_COLOR}\">&#9679;</font> "
 SYSTEM_MESSAGE_SYMBOL = f"<font color=\"{SYSTEM_MESSAGE_COLOR}\">&#9679;</font> "
@@ -267,6 +282,14 @@ class Quirc_IRC_Client(QWidget):
 		self.user_list.setObjectName("user_list")
 		self.user_list.setFont(userfont)
 		self.user_list.installEventFilter(self)
+
+		if HIGH_CONTRAST:
+			self.chat_display.setStyleSheet("QTextBrowser { background-color: #000000; color: white }")
+			self.user_list.setStyleSheet("QListWidget { background-color: #000000; color: white }")
+			self.irc_input.setStyleSheet("QLineEdit { background-color: #000000; color: white }")
+			self.setStyleSheet("QWidget { background-color: #000000; color: white }")
+			self.channel.setStyleSheet("QLabel { background-color: #000000; color: white }")
+			self.topic.setStyleSheet("QLabel { background-color: #000000; color: white }")
 
 		if RUN_IN_GADGET_MODE:
 			if GADGET_ALWAYS_ON_TOP:
@@ -528,12 +551,12 @@ class QuircClientConnection(irc.IRCClient):
 		global CONNECTED
 		CONNECTED = False
 		system_msg_display(ircform,"Connection lost.")
-		ircform.changeTitle(f"Disconnected")
+		update_window_title(ircform)
 		irc.IRCClient.connectionLost(self, reason)
 
 	def signedOn(self):
 		system_msg_display(ircform,"Connected!")
-		ircform.changeTitle(f"{SERVER}:{PORT}")
+		update_window_title(ircform)
 		self.join(CHANNEL, CHANNEL_PASSWORD)
 
 	def joined(self, channel):
@@ -623,12 +646,11 @@ class QuircClientConnection(irc.IRCClient):
 		system_msg_display(ircform,f"{user} left {channel}")
 		fetch_userlist(self)
 
-	def afterCollideNick(self, nickname):
+	def irc_ERR_NICKNAMEINUSE(self, prefix, params):
 		global NICKNAME
-		NICKNAME = nickname + random.randint(100, 999)
-		system_msg_display(ircform,f"Nickname is now {NICKNAME}")
-		fetch_userlist(self)
-		return NICKNAME
+		NICKNAME = f"{NICKNAME}{random.randint(100, 999)}"
+		self.setNick(NICKNAME)
+		update_window_title(ircform)
 
 	def userRenamed(self, oldname, newname):
 		system_msg_display(ircform,f"User {oldname} changed their nick to {newname}")
@@ -754,6 +776,14 @@ class QuircClientConnection(irc.IRCClient):
 			error_msg_display(ircform,"Permission denied (incorrect password)")
 		if "banned from this server" in line2:
 			error_msg_display(ircform,"You are banned from this server")
+		if "kill a server" in line2:
+			error_msg_display(ircform,"Permission denied (you can't kill a server)")
+		if "O-lines for your host" in line2:
+			error_msg_display(ircform,"Error: no O-lines for your host")
+		if "Unknown MODE flag" in line2:
+			error_msg_display(ircform,"Error: unknown MODE flag")
+		if "change mode for other users" in line2:
+			error_msg_display(ircform,"Permission denied (can't change mode for other users)")
 		#print(line)
 		return irc.IRCClient.lineReceived(self, line)
 
@@ -814,30 +844,30 @@ def sort_nicks(nicklist):
 
 def display_help(obj):
 
-	write_to_display(obj,"<font style=\"background-color:silver;\"><b>/connect</b> SERVER PORT        -  <i>Connect to an IRC server</i></p>")
+	write_to_display(obj,"<font style=\"background-color:gray;\"><b>/connect</b> SERVER PORT        -  <i>Connect to an IRC server</i></p>")
 	if IRC_SSL:
-		write_to_display(obj,"<font style=\"background-color:silver;\"><b>/ssl</b> SERVER PORT        -  <i>Connect to an IRC server via SSL</i></p>")
-	write_to_display(obj,"<font style=\"background-color:silver;\"><b>/exit</b>        -  <i>Exits Quirc</i></p>")
+		write_to_display(obj,"<font style=\"background-color:gray;\"><b>/ssl</b> SERVER PORT        -  <i>Connect to an IRC server via SSL</i></p>")
+	write_to_display(obj,"<font style=\"background-color:gray;\"><b>/exit</b>        -  <i>Exits Quirc</i></p>")
 
 	if RUN_IN_GADGET_MODE:
-		write_to_display(obj,"<font style=\"background-color:silver;\"><b>/move X Y</b>               -  <i>Moves the IRC gadget</i>")
-		write_to_display(obj,"<font style=\"background-color:silver;\"><b>/size WIDTH HEIGHT</b>      -  <i>Resizes the IRC gadget</i>")
+		write_to_display(obj,"<font style=\"background-color:gray;\"><b>/move X Y</b>               -  <i>Moves the IRC gadget</i>")
+		write_to_display(obj,"<font style=\"background-color:gray;\"><b>/size WIDTH HEIGHT</b>      -  <i>Resizes the IRC gadget</i>")
 
 	if not CONNECTED: return
-	write_to_display(obj,"<font style=\"background-color:silver;\"><b>/nick</b> NEWNICK        -  <i>Change nickname</i></p>")
-	write_to_display(obj,"<font style=\"background-color:silver;\"><b>/msg</b> TARGET MESSAGE  -  <i>Sends a private message</i>")
-	write_to_display(obj,"<font style=\"background-color:silver;\"><b>/me</b> ACTION           -  <i>Sends a CTCP action message</i>")
-	write_to_display(obj,"<font style=\"background-color:silver;\"><b>/join</b> CHANNEL [KEY]  -  <i>Joins a new channel</i>")
-	write_to_display(obj,"<font style=\"background-color:silver;\"><b>/away</b> [MESSAGE]      -  <i>Sets status to away</i>")
-	write_to_display(obj,"<font style=\"background-color:silver;\"><b>/back</b>                -  <i>Sets status to back</i>")
-	write_to_display(obj,"<font style=\"background-color:silver;\"><b>/invite</b> NICKNAME CHANNEL      -  <i>Sends a channel invitation</i>")
-	write_to_display(obj,"<font style=\"background-color:silver;\"><b>/whois</b> NICKNAME      -  <i>Requests whois data from the server</i>")
-	write_to_display(obj,"<font style=\"background-color:silver;\"><b>/quit</b> [MESSAGE]      -  <i>Quits IRC</i>")
-	write_to_display(obj,"<font style=\"background-color:silver;\"><b>/raw</b> [MESSAGE]      -  <i>Sends an unaltered message to the server</i>")
+	write_to_display(obj,"<font style=\"background-color:gray;\"><b>/nick</b> NEWNICK        -  <i>Change nickname</i></p>")
+	write_to_display(obj,"<font style=\"background-color:gray;\"><b>/msg</b> TARGET MESSAGE  -  <i>Sends a private message</i>")
+	write_to_display(obj,"<font style=\"background-color:gray;\"><b>/me</b> ACTION           -  <i>Sends a CTCP action message</i>")
+	write_to_display(obj,"<font style=\"background-color:gray;\"><b>/join</b> CHANNEL [KEY]  -  <i>Joins a new channel</i>")
+	write_to_display(obj,"<font style=\"background-color:gray;\"><b>/away</b> [MESSAGE]      -  <i>Sets status to away</i>")
+	write_to_display(obj,"<font style=\"background-color:gray;\"><b>/back</b>                -  <i>Sets status to back</i>")
+	write_to_display(obj,"<font style=\"background-color:gray;\"><b>/invite</b> NICKNAME CHANNEL      -  <i>Sends a channel invitation</i>")
+	write_to_display(obj,"<font style=\"background-color:gray;\"><b>/whois</b> NICKNAME      -  <i>Requests whois data from the server</i>")
+	write_to_display(obj,"<font style=\"background-color:gray;\"><b>/quit</b> [MESSAGE]      -  <i>Quits IRC</i>")
+	write_to_display(obj,"<font style=\"background-color:gray;\"><b>/raw</b> [MESSAGE]      -  <i>Sends an unaltered message to the server</i>")
 	if CLIENT_IS_OPERATOR:
-		write_to_display(obj,"<font style=\"background-color:silver;\"><b>/topic</b> TEXT          -  <i>Sets the current channel's topic</i>")
-		write_to_display(obj,"<font style=\"background-color:silver;\"><b>/key</b> TEXT            -  <i>Sets the current channel's key</i>")
-		write_to_display(obj,"<font style=\"background-color:silver;\"><b>/nokey</b>               -  <i>Unsets the current channel's key</i>")
+		write_to_display(obj,"<font style=\"background-color:gray;\"><b>/topic</b> TEXT          -  <i>Sets the current channel's topic</i>")
+		write_to_display(obj,"<font style=\"background-color:gray;\"><b>/key</b> TEXT            -  <i>Sets the current channel's key</i>")
+		write_to_display(obj,"<font style=\"background-color:gray;\"><b>/nokey</b>               -  <i>Unsets the current channel's key</i>")
 
 def handle_commands(obj,text):
 	tokens = text.split()
@@ -958,6 +988,7 @@ def handle_commands(obj,text):
 		bot.setNick(NICKNAME)
 		fetch_userlist(bot)
 		system_msg_display(obj,f"You are now known as {NICKNAME}")
+		update_window_title(ircform)
 		return True
 
 	if len(tokens) >= 1 and tokens[0] == "/quit":
@@ -1100,6 +1131,12 @@ def remove_from_user_list( obj, text ):
 	if len(items) > 0:
 		for item in items:
 			obj.user_list.takeItem(obj.user_list.row(item))
+
+def update_window_title(obj):
+	if CONNECTED:
+		obj.changeTitle(f"{NICKNAME} - {SERVER}:{PORT}")
+	else:
+		obj.changeTitle(f"Disconnected")
 
 # ================
 # | MAIN PROGRAM |
