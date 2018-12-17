@@ -46,6 +46,8 @@ GADGET_WIDTH = 600
 GADGET_HEIGHT = 600
 GADGET_ALWAYS_ON_TOP = False
 
+IRC_SSL = True
+
 # ================================
 # | HANDLE COMMANDLINE ARGUMENTS |
 # ================================
@@ -68,15 +70,7 @@ parser.add_argument("-d","--default", help="Set default channel (default: #quirc
 
 parser.add_argument("-f","--font", help="Set display font (default: Courier New)")
 
-parser.add_argument("-s","--server", help="IRC server to connect to")
-parser.add_argument("-P","--port", help="IRC server port to connect to", type=int)
-
 args = parser.parse_args()
-
-if args.server:
-	SERVER = args.server
-if args.port:
-	PORT = args.port
 
 if args.nick:
 	NICKNAME = args.nick
@@ -118,6 +112,18 @@ app = QApplication(sys.argv)
 import qt5reactor
 qt5reactor.install()
 from twisted.internet import reactor, protocol
+
+try:
+	from twisted.internet import ssl
+except ImportError as error:
+	# Output expected ImportErrors.
+	print(error.__class__.__name__ + ": " + error.message)
+	IRC_SSL = False
+except Exception as exception:
+	# Output unexpected Exceptions.
+	print(exception, False)
+	print(exception.__class__.__name__ + ": " + exception.message)
+
 from twisted.words.protocols import irc
 
 from PyQt5.QtGui import *
@@ -128,7 +134,7 @@ from PyQt5 import QtCore
 # | WIDGET SIZES AND LOCATIONS |
 # ==============================
 
-input_height = 23
+input_height = 22
 output_width = 440
 output_height = 400
 text_x = 10
@@ -252,9 +258,8 @@ class Quirc_IRC_Client(QWidget):
 		write_to_display(self,f"<b>Version {VERSION}</b>")
 		write_to_display(self,f"<b><i>{DESCRIPTION}</i></b>")
 		write_to_display(self,"")
-		if SERVER == "none" and PORT == 0:
-			write_to_display(self,"<b>Enter /help for a list of commands</b>")
-			write_to_display(self,"")
+		write_to_display(self,"Enter a command to connect to IRC!")
+		display_help(self)
 			
 		# Channel user list
 		self.user_list = QListWidget(self)
@@ -810,6 +815,8 @@ def sort_nicks(nicklist):
 def display_help(obj):
 
 	write_to_display(obj,"<font style=\"background-color:silver;\"><b>/connect</b> SERVER PORT        -  <i>Connect to an IRC server</i></p>")
+	if IRC_SSL:
+		write_to_display(obj,"<font style=\"background-color:silver;\"><b>/ssl</b> SERVER PORT        -  <i>Connect to an IRC server via SSL</i></p>")
 	write_to_display(obj,"<font style=\"background-color:silver;\"><b>/exit</b>        -  <i>Exits Quirc</i></p>")
 
 	if RUN_IN_GADGET_MODE:
@@ -838,12 +845,27 @@ def handle_commands(obj,text):
 	global CHANNEL
 	global CLIENT_IS_AWAY
 	global CHANNEL_KEY
+	global CONNECTED
+	global bot
+	global SERVER
+	global PORT
+
+	if IRC_SSL:
+		if len(tokens) == 3 and tokens[0] == "/ssl":
+			if CONNECTED:
+				bot.quit()
+				CONNECTED = False
+				empty_userlist(obj)
+				obj.channel.setText("")
+				obj.topic.setText("No topic")
+				obj.changeTitle("Disconnected")
+			SERVER = tokens[1]
+			PORT = tokens[2]
+			bot = QuircConnectionFactory()
+			reactor.connectSSL(SERVER,int(PORT),bot,ssl.ClientContextFactory())
+			return True
 
 	if len(tokens) == 3 and tokens[0] == "/connect":
-		global CONNECTED
-		global bot
-		global SERVER
-		global PORT
 		if CONNECTED:
 			bot.quit()
 			CONNECTED = False
@@ -1086,9 +1108,5 @@ def remove_from_user_list( obj, text ):
 if __name__ == '__main__':
 	global ircform
 	ircform = Quirc_IRC_Client()
-
-	if SERVER != "none" and PORT != 0:
-		bot = QuircConnectionFactory()
-		reactor.connectTCP(SERVER, PORT, bot)
 
 	reactor.run()

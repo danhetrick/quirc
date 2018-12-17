@@ -6,14 +6,18 @@ A Python/Qt5 IRC client
     pip install pyqt5
     pip install Twisted
 
+If you want to use SSL to connect to IRC, pyOpenSSL is also required:
+
+    pip install pyOpenSSL
+
+If pyOpenSSL is not installed, SSL connections will not be possible; only commands to connect to normal, non-encrypted connections will be shown.
+
 **Quirc** was written and tested under Windows, and should run in any other OS that supports Python 3, Qt5, and Twisted.
 
 ## Usage
 **Quirc** is a single channel IRC client. It takes no mandatory command-line arguments. Once **Quirc** is up and running, use the `/connect` command to connect to an IRC server. Optional command-line options are available:
 
     -h, --help			Display usage text
-    -s, --server HOST               IRC server to connect to
-    -P, --port NUMBER               IRC server port to connect to
     -n, --nick NICKNAME		Set nickname (default: quirc)
     -u, --username USERNAME		Set username (default: quirc)
     -c, --channel CHANNEL		Set initial channel (default: #quirc)
@@ -21,17 +25,12 @@ A Python/Qt5 IRC client
     -p, --password KEY              Key required to join channel
     -f, --font FONT			Set display font (default: "Courier New")
 
-For a more complex example, let's connect to EFnet, use the nickname `bob`, join channel `#foo`, and use "Arial" as the display font:
-
-```bash
-python quirc.py --server irc.servercentral.net --port 6667 -n bob --channel "#foo" --font "Arial" -s "orange"
-```
-
 Once up and running, **Quirc** runs like any other graphical IRC client you might have used.
 
 ## Quirc Client Commands
 
     /connect SERVER PORT    Connects to an IRC server
+    /ssl SERVER PORT        Connects to an IRC server via SSL (requires --ssl option)
     /nick NICKNAME          Changes the client's nickname
     /msg TARGET MESSAGE     Sends a private or channel message
     /me ACTION              Sends a CTCP action message
@@ -68,7 +67,7 @@ When running as a gadget, **Quirc** adds a couple of client commands to change t
     /move X_VALUE Y_VALUE   Moves the Quirc gadget
     /size WIDTH HEIGHT      Resizes the Quirc gadget
 
-To close the gadget, use the `/quit` command.
+To close the gadget, use the `/exit` command.
 
 ## Example Quirc Usage
 
