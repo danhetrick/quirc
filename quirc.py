@@ -16,8 +16,8 @@
 # ===========================
 
 APPLICATION = "Quirc"
-VERSION = "0.01629"
-DESCRIPTION = "A Python/Qt5 IRC client"
+VERSION = "0.01640"
+DESCRIPTION = "A Python3/Qt5 IRC client"
 
 # ========================
 # | IRC NETWORK SETTINGS |
@@ -54,6 +54,8 @@ HIGH_CONTRAST = False
 
 CREATE_LINKS = True
 
+MAXIMUM_IRC_MESSAGE_LENGTH = 450
+
 # ================================
 # | HANDLE COMMANDLINE ARGUMENTS |
 # ================================
@@ -79,6 +81,8 @@ parser.add_argument("-C","--highcontrast", help="Run Quirc in high contrast mode
 
 parser.add_argument("-l","--nolinks", help="Don't change URLs in chat to links", action='store_true')
 
+parser.add_argument("-m","--maxlength", help="Maximum character length of IRC messages sent  (default: 450)", type=int)
+
 args = parser.parse_args()
 
 if args.nick:
@@ -100,6 +104,9 @@ if args.nolinks:
 
 if args.highcontrast:
 	HIGH_CONTRAST = True
+
+if args.maxlength:
+	MAXIMUM_IRC_MESSAGE_LENGTH = args.maxlength
 
 if args.gadget:
 	RUN_IN_GADGET_MODE = True
@@ -309,7 +316,7 @@ class Quirc_IRC_Client(QWidget):
 		self.user_list.setFont(userfont)
 		self.user_list.installEventFilter(self)
 
-		#self.irc_input.setText("/connect localhost 6667")
+		self.irc_input.setText("/connect localhost 6667")
 
 		if HIGH_CONTRAST:
 			self.chat_display.setStyleSheet("QTextBrowser { background-color: #000000; color: white }")
@@ -604,6 +611,8 @@ class QuircClientConnection(irc.IRCClient):
 		CONNECTED = False
 		system_msg_display(ircform,"Connection lost.")
 		update_server_label(ircform)
+		empty_userlist(ircform)
+		ircform.channel.setText("")
 		irc.IRCClient.connectionLost(self, reason)
 
 	def signedOn(self):
@@ -786,6 +795,88 @@ class QuircClientConnection(irc.IRCClient):
 		nick = params[1]
 		system_msg_display(ircform,f"End of whois data for {nick}")
 
+	def irc_RPL_WHOWASUSER(self, prefix, params):
+		nick = params[1]
+		username = params[2]
+		host = params[3]
+		realname = params[5]
+		whois_msg_display(ircform,f"{nick}({username})'s host was {host}")
+
+	def irc_RPL_ENDOFWHOWAS(self, prefix, params):
+		nick = params[1]
+		system_msg_display(ircform,f"End of whowas data for {nick}")
+
+	def irc_RPL_WHOREPLY(self, prefix, params):
+		channel = params[1]
+		username = params[2]
+		host = params[3]
+		server = params[4]
+		nick = params[5]
+		hr = params[7].split(' ')
+		if len(hr) >= 2:
+			hopcount = hr[0]
+			realname = hr[1]
+			whois_msg_display(ircform,f"{channel} {nick}: Username: {username}, Realname: {realname}, Host: {host}, Server: {server}, Hops: {hopcount}")
+		else:
+			whois_msg_display(ircform,f"{channel} {nick}: Username: {username}, Host: {host}, Server: {server}")
+
+	def irc_RPL_ENDOFWHO(self, prefix, params):
+		nick = params[1]
+		system_msg_display(ircform,f"End of who data for {nick}")
+
+	def irc_RPL_INVITING(self, prefix, params):
+		channel = params[1]
+		nick = params[2]
+		system_msg_display(ircform,f"Invitation to {channel} sent to {nick}")
+
+	def irc_RPL_VERSION(self, prefix, params):
+		sversion = params[1]
+		server = params[2]
+		whois_msg_display(ircform,f"Server version: {sversion}")
+
+	def irc_RPL_CHANNELMODEIS(self, prefix, params):
+		channel = params[1]
+		if params[2] == '+' or params[2] == '-':
+			whois_msg_display(ircform,f"{channel} has no modes set")
+			return
+		modes = f"{params[2]} {params[3]}"
+		whois_msg_display(ircform,f"{channel} mode(s): {modes}")
+
+	def irc_RPL_YOUREOPER(self, prefix, params):
+		whois_msg_display(ircform,f"You are now an IRC operator")
+
+	def irc_RPL_TIME(self, prefix, params):
+		t = params[2]
+		whois_msg_display(ircform,f"Server time/date: {t}")
+
+	def irc_RPL_INFO(self, prefix, params):
+		whois_msg_display(ircform,f"{params[1]}")
+
+
+	def irc_RPL_ENDOFINFO(self, prefix, params):
+		system_msg_display(ircform,f"End of info data")
+
+	def irc_RPL_LIST(self, prefix, params):
+		chan = params[1]
+		crowd = params[2]
+		topic = params[3]
+		if topic == ' ':
+			if int(crowd) > 1:
+				whois_msg_display(ircform,f"{chan} ({crowd} users)")
+			else:
+				whois_msg_display(ircform,f"{chan} (1 user)")
+		else:
+			topic = topic.strip()
+			if int(crowd) > 1:
+				whois_msg_display(ircform,f"{chan} ({crowd} users): \"{topic}\"")
+			else:
+				whois_msg_display(ircform,f"{chan} ({crowd} users): \"{topic}\"")
+
+	def irc_RPL_LISTSTART(self, prefix, params):
+		system_msg_display(ircform,f"Start of list data")
+
+	def irc_RPL_LISTEND(self, prefix, params):
+		system_msg_display(ircform,f"End of list data")
 
 	def lineReceived(self, line):
 		try:
@@ -909,6 +1000,8 @@ def sort_nicks(nicklist):
 
 def display_help(obj):
 
+	write_to_display(obj,f"<font style=\"background-color:gray;\"><br><b>{APPLICATION} {VERSION} Commands</b><br>")
+
 	write_to_display(obj,"<font style=\"background-color:gray;\"><b>/connect</b> SERVER PORT        -  <i>Connect to an IRC server</i></p>")
 	if IRC_SSL:
 		write_to_display(obj,"<font style=\"background-color:gray;\"><b>/ssl</b> SERVER PORT        -  <i>Connect to an IRC server via SSL</i></p>")
@@ -918,21 +1011,33 @@ def display_help(obj):
 		write_to_display(obj,"<font style=\"background-color:gray;\"><b>/move X Y</b>               -  <i>Moves the IRC gadget</i>")
 		write_to_display(obj,"<font style=\"background-color:gray;\"><b>/size WIDTH HEIGHT</b>      -  <i>Resizes the IRC gadget</i>")
 
+	write_to_display(obj,"<font style=\"background-color:gray;\"><b>/script</b> FILENAME      -  <i>Loads a list of Quirc commands from a file and executes them</i>")
+
 	if not CONNECTED: return
 	write_to_display(obj,"<font style=\"background-color:gray;\"><b>/nick</b> NEWNICK        -  <i>Change nickname</i></p>")
 	write_to_display(obj,"<font style=\"background-color:gray;\"><b>/msg</b> TARGET MESSAGE  -  <i>Sends a private message</i>")
 	write_to_display(obj,"<font style=\"background-color:gray;\"><b>/me</b> ACTION           -  <i>Sends a CTCP action message</i>")
 	write_to_display(obj,"<font style=\"background-color:gray;\"><b>/join</b> CHANNEL [KEY]  -  <i>Joins a new channel</i>")
+	write_to_display(obj,"<font style=\"background-color:gray;\"><b>/mode</b> TARGET MODE ARGUMENTS      -  <i>Sets a channel or user mode</i>")
+	write_to_display(obj,"<font style=\"background-color:gray;\"><b>/oper</b> USERNAME PASSWORD      -  <i>Logs into an operator account</i>")
+	write_to_display(obj,"<font style=\"background-color:gray;\"><b>/list</b> [CHANNEL] [...]      -  <i>Requests channel information from the servert</i>")
 	write_to_display(obj,"<font style=\"background-color:gray;\"><b>/away</b> [MESSAGE]      -  <i>Sets status to away</i>")
 	write_to_display(obj,"<font style=\"background-color:gray;\"><b>/back</b>                -  <i>Sets status to back</i>")
 	write_to_display(obj,"<font style=\"background-color:gray;\"><b>/invite</b> NICKNAME CHANNEL      -  <i>Sends a channel invitation</i>")
 	write_to_display(obj,"<font style=\"background-color:gray;\"><b>/whois</b> NICKNAME      -  <i>Requests whois data from the server</i>")
+	write_to_display(obj,"<font style=\"background-color:gray;\"><b>/whowas</b> NICKNAME      -  <i>Requests whowas data from the server</i>")
+	write_to_display(obj,"<font style=\"background-color:gray;\"><b>/who</b> SEARCH      -  <i>Search for users</i>")
+	write_to_display(obj,"<font style=\"background-color:gray;\"><b>/version</b>                -  <i>Requests software version from the server</i>")
 	write_to_display(obj,"<font style=\"background-color:gray;\"><b>/quit</b> [MESSAGE]      -  <i>Quits IRC</i>")
+	write_to_display(obj,"<font style=\"background-color:gray;\"><b>/time</b>                -  <i>Requests the server date/time</i>")
+	write_to_display(obj,"<font style=\"background-color:gray;\"><b>/info</b>                -  <i>Requests the server info text</i>")
 	write_to_display(obj,"<font style=\"background-color:gray;\"><b>/raw</b> [MESSAGE]      -  <i>Sends an unaltered message to the server</i>")
+	write_to_display(obj,"<font style=\"background-color:gray;\"><b>/print</b> [TEXT]      -  <i>Prints text on the chat display</i>")
 	if CLIENT_IS_OPERATOR:
 		write_to_display(obj,"<font style=\"background-color:gray;\"><b>/topic</b> TEXT          -  <i>Sets the current channel's topic</i>")
 		write_to_display(obj,"<font style=\"background-color:gray;\"><b>/key</b> TEXT            -  <i>Sets the current channel's key</i>")
 		write_to_display(obj,"<font style=\"background-color:gray;\"><b>/nokey</b>               -  <i>Unsets the current channel's key</i>")
+	write_to_display(obj,"<font style=\"background-color:gray;\"><br>To send more than one command at a time, chain them together with \"&&\"<br>")
 
 def handle_commands(obj,text):
 	tokens = text.split()
@@ -944,6 +1049,27 @@ def handle_commands(obj,text):
 	global bot
 	global SERVER
 	global PORT
+
+	if '&&' in text:
+		cmds = text.split('&&')
+		for c in cmds:
+			if not handle_commands(obj,c):
+				error_msg_display(obj,f"Error executing command: \"{c}\"")
+				return True
+		return True
+
+	if len(tokens) == 2 and tokens[0] == '/script':
+		script = open(tokens[1],"r")
+		for line in script:
+			if not handle_commands(obj,line):
+				error_msg_display(obj,f"Error executing scripted command: \"{c}\"")
+				return True
+		return True
+
+	if len(tokens) >= 2 and tokens[0] == "/print":
+		tokens.pop(0)
+		write_to_display(obj,f"{' '.join(tokens)}")
+		return True
 
 	if IRC_SSL:
 		if len(tokens) == 3 and tokens[0] == "/ssl":
@@ -984,17 +1110,84 @@ def handle_commands(obj,text):
 
 	if not CONNECTED: return
 
+	if len(tokens) >= 2 and tokens[0] == "/list":
+		tokens.pop(0)
+		chans = ','.join(tokens)
+		bot.sendLine(f"LIST {chans}")
+		system_msg_display(obj,f"Requested list data for {chans}")
+		return True
+
+	if len(tokens) == 1 and tokens[0] == "/list":
+		bot.sendLine(f"LIST")
+		system_msg_display(obj,f"Requested list data for all channels")
+		return True
+
+	if len(tokens) == 1 and tokens[0] == "/info":
+		bot.sendLine("INFO")
+		return True
+
+	if len(tokens) == 1 and tokens[0] == "/time":
+		bot.sendLine("TIME")
+		return True
+
+	if len(tokens) >= 3 and tokens[0] == "/oper":
+		tokens.pop(0)
+		username = tokens.pop(0)
+		password = ' '.join(tokens)
+		bot.sendLine(f"OPER {username} {password}")
+		return True
+
+	if len(tokens) >= 1 and tokens[0] == "/mode":
+		if len(tokens) == 1:
+			bot.sendLine(f"MODE {CHANNEL}")
+			return True
+		tokens.pop(0)
+		if len(tokens) >= 3:
+			target = tokens.pop(0)
+			mod = tokens.pop(0)
+			p = ' '.join(tokens)
+			bot.sendLine(f"MODE {target} {mod} {p}")
+			return True
+		elif len(tokens) == 2:
+			target = tokens.pop(0)
+			mod = tokens.pop(0)
+			bot.sendLine(f"MODE {target} {mod}")
+			return True
+		else:
+			error_msg_display(obj,f"Unrecognized mode: {' '.join(tokens)}")
+			return True
+
+	if len(tokens) == 1 and tokens[0] == "/version":
+		bot.sendLine("VERSION")
+		system_msg_display(obj,f"Requested version data")
+		return True
+
+	if len(tokens) >= 2 and tokens[0] == "/who":
+		tokens.pop(0)
+		bot.sendLine(f"WHO {' '.join(tokens)}")
+		system_msg_display(obj,f"Requested who data")
+		return True
+
+	if len(tokens) == 2 and tokens[0] == "/whowas":
+		bot.sendLine(f"WHOWAS {tokens[1]}")
+		system_msg_display(obj,f"Requested whowas data for {NICKNAME}")
+		return True
+
 	if len(tokens) == 2 and tokens[0] == "/whois":
 		NICKNAME = tokens[1]
 		bot.whois(NICKNAME)
 		system_msg_display(obj,f"Requested whois data for {NICKNAME}")
 		return True
 
+	if len(tokens) == 2 and tokens[0] == "/invite":
+		target = tokens[1]
+		bot.sendLine(f"INVITE {target} {CHANNEL}")
+		return True
+
 	if len(tokens) == 3 and tokens[0] == "/invite":
 		target = tokens[1]
 		chan = tokens[2]
 		bot.sendLine(f"INVITE {target} {chan}")
-		system_msg_display(obj,f"Invitation to {chan} sent to {target}")
 		return True
 
 	if RUN_IN_GADGET_MODE:
@@ -1145,9 +1338,18 @@ def handle_commands(obj,text):
 def handle_user_input( obj, text ):
 	if handle_commands(obj,text):
 		return
-	if not CONNECTED: return
+	if len(text) >= 1:
+		if text[0] == '/':
+			error_msg_display(obj,f"Unrecognized command: \"{text}\"")
+			return
+	if not CONNECTED:
+		if IRC_SSL:
+			error_msg_display(obj,f"Not connected to a server. Use /connect or /ssl to connect to one")
+		else:
+			error_msg_display(obj,f"Not connected to a server. Use /connect to connect to one")
+		return
 	chat_msg_display(obj,bot.nickname,text)
-	bot.msg(CHANNEL,text,length=450)
+	bot.msg(CHANNEL,text,length=MAXIMUM_IRC_MESSAGE_LENGTH)
 
 def private_msg_display( obj, user, text ):
 	if CREATE_LINKS:

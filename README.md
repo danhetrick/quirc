@@ -27,6 +27,7 @@ If pyOpenSSL is not installed, SSL connections will not be possible; only comman
     -f, --font FONT			Set display font (default: "Courier New")
     -C, --highcontrast              Quirc will use a high contrast color set
     -l, --nolinks       Turn off URL detection in chat
+    -m, --maxlength NUMBER  Sets the maximum size of sent messages (default:450)
 
 Once up and running, **Quirc** runs like any other graphical IRC client you might have used.
 
@@ -34,14 +35,23 @@ Once up and running, **Quirc** runs like any other graphical IRC client you migh
 
     /connect SERVER PORT    Connects to an IRC server
     /ssl SERVER PORT        Connects to an IRC server via SSL (requires pyOpenSSL)
+    /script FILENAME        Loads a list of commands from a file and executes them
     /nick NICKNAME          Changes the client's nickname
     /msg TARGET MESSAGE     Sends a private or channel message
     /me ACTION              Sends a CTCP action message
     /join CHANNEL [KEY]     Joins a new channel, and leaves the current one
+    /mode TARGET MODE ARGS  Sets a channel or user mode
+    /oper USER PASSWORD     Logs into an IRCop account
+    /list [CHANNEL] [...]   Requests channel list information
     /away [MESSAGE]         Sets status to "away"
     /back                   Sets status to "back"
     /invite NICK CHANNEL    Invites a user to a channel
     /whois USER             Request WHOIS information from the server
+    /whowas USER            Requests WHOWAS information from the server
+    /who TERMS              Search for users
+    /time                   Requests the server's date/time
+    /version                Requests the server's software version
+    /info                   Requests the server's info text
     /raw MESSAGE            Sends an unaltered message to the IRC server
     /quit [MESSAGE]         Disconnects from IRC server
     /exit                   Disconnects from IRC server and exits Quirc
@@ -53,6 +63,12 @@ If the client has operator status, there are three more commands available:
     /nokey                  Removes a channel's key
 
 Right clicking on the user list will show a menu with available commands, as will right clicking on the channel name (at the top right of the window) or the topic display (at the top left).
+
+Multiple commands can be issued at once by chaining them together with "&&". For example, to join channel #foo, say hello, and leave the channel and join #bar, you could use:
+
+```
+/join #foo && /msg #foo Hello, everybody! && /join #bar
+```
 
 ## Quirc Gadget
 

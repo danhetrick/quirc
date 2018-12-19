@@ -1,3 +1,23 @@
+Version 0.01640
+	* Fixed /invite command
+	* Added /version command
+	* Added /mode command
+	* Multiple commands can be issued at once by chaining them together with '&&'
+	* Added /script command; commands are loaded from a text file and executed
+	* Added /print command
+	* Added /oper command
+	* Added /time command
+	* Added /info command
+	* Added /list command
+	* Fixed a bug where GUI wasn't updated if the connection is lost
+
+Version 0.01636
+	* Changed GUI application description to match targeted Python version (Python3)
+	* Added /whowas command
+	* Added /who command
+	* If an entered chat starts with a '/', and isn't recognized as a command, an error is displayed
+	* If chat text is entered when disconnected, an error is displayed
+	* Added a commandline option to set maximum length of sent chat, in characters
 
 Version 0.01629
 	* Started changelog
