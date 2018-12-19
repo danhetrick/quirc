@@ -16,7 +16,7 @@
 # ===========================
 
 APPLICATION = "Quirc"
-VERSION = "0.01624"
+VERSION = "0.01629"
 DESCRIPTION = "A Python/Qt5 IRC client"
 
 # ========================
@@ -52,6 +52,8 @@ WINDOW_TITLE = "Disconnected"
 
 HIGH_CONTRAST = False
 
+CREATE_LINKS = True
+
 # ================================
 # | HANDLE COMMANDLINE ARGUMENTS |
 # ================================
@@ -75,6 +77,8 @@ parser.add_argument("-d","--default", help="Set default channel (default: #quirc
 parser.add_argument("-f","--font", help="Set display font (default: Courier New)")
 parser.add_argument("-C","--highcontrast", help="Run Quirc in high contrast mode", action='store_true')
 
+parser.add_argument("-l","--nolinks", help="Don't change URLs in chat to links", action='store_true')
+
 args = parser.parse_args()
 
 if args.nick:
@@ -90,6 +94,9 @@ if args.default:
 
 if args.font:
 	CLIENT_FONT = args.font
+
+if args.nolinks:
+	CREATE_LINKS = False
 
 if args.highcontrast:
 	HIGH_CONTRAST = True
@@ -114,6 +121,7 @@ if args.gadget:
 import sys
 import random
 from datetime import datetime, timedelta
+import re
 
 from PyQt5.QtWidgets import *
 app = QApplication(sys.argv)
@@ -151,10 +159,12 @@ user_width = 150
 user_height = 400
 user_x = text_x + output_width + 10
 input_width = output_width + user_width + 10
-window_width = output_width + user_width + 30
-window_height = output_height + input_height + 30
-text_y = 30
+
+text_y = 40
 output_y = 5
+
+window_width = output_width + user_width + text_y
+window_height = output_height + input_height + text_y
 
 # =====================
 # | RUN TIME SETTINGS |
@@ -186,7 +196,8 @@ ERROR_MESSAGE_SYMBOL = f"<font color=\"{ERROR_MESSAGE_COLOR}\">&#9679;</font> "
 
 CLIENT_IS_OPERATOR = False
 CLIENT_IS_AWAY = False
-TOPIC = "No topic"
+NO_TOPIC = " "
+TOPIC = NO_TOPIC
 CHANNEL_KEY = CHANNEL_PASSWORD
 
 LOGO = """ ██████╗ ██╗   ██╗██╗██████╗  ██████╗
@@ -216,11 +227,15 @@ class Quirc_IRC_Client(QWidget):
 	def resizeEvent(self,resizeEvent):
 		rwindow_width = self.width()
 		rwindow_height = self.height()
-		self.user_list.setGeometry(QtCore.QRect(rwindow_width-user_width-10, text_y, user_width, rwindow_height-60))
-		self.channel.setGeometry(QtCore.QRect(rwindow_width-user_width-10, text_y-30, user_width, self.channel.height()))
-		self.chat_display.setGeometry(QtCore.QRect(text_x, text_y, rwindow_width-self.user_list.width()-22, rwindow_height-60))
-		self.topic.setGeometry(QtCore.QRect(text_x, text_y-30, rwindow_width-self.user_list.width()-25, self.topic.height()))
+		display_height = rwindow_height -70
+		topic_and_channel_y = text_y-25
+		self.user_list.setGeometry(QtCore.QRect(rwindow_width-user_width-10, text_y, user_width, display_height))
+		self.channel.setGeometry(QtCore.QRect(rwindow_width-user_width-10, topic_and_channel_y, user_width, self.channel.height()))
+		self.chat_display.setGeometry(QtCore.QRect(text_x, text_y, rwindow_width-self.user_list.width()-22, display_height))
+		self.topic.setGeometry(QtCore.QRect(text_x, topic_and_channel_y, rwindow_width-self.user_list.width()-25, self.topic.height()))
 		self.irc_input.setGeometry(QtCore.QRect(text_x, text_y+self.chat_display.height()+2, rwindow_width-20, input_height))
+
+		self.server.setGeometry(QtCore.QRect(text_x, -5, output_width+user_width+5, self.channel.height()))
 
 	def user_input(self):
 		handle_user_input(self,self.irc_input.text())
@@ -234,11 +249,19 @@ class Quirc_IRC_Client(QWidget):
 
 	def createQuircUI(self):
 
-		self.setWindowTitle("Disconnected")
+		self.setWindowTitle(f"{APPLICATION} {VERSION}")
 
 		font = QFont(CLIENT_FONT, 10)
 		channel_and_topic_font = QFont(CLIENT_FONT, 10, QFont.Bold)
 		userfont = QFont(CLIENT_FONT, 10, QFont.Bold)
+
+		# Channel name display
+		self.server = QLabel(self)
+		self.server.setText(" ")
+		self.server.move(text_x,0)
+		self.server.setFont(channel_and_topic_font)
+		self.server.setGeometry(QtCore.QRect(self.server.x(), self.server.y(), output_width+user_width, self.server.height()))
+		self.server.installEventFilter(self)
 
 		# Channel name display
 		self.channel = QLabel(self)
@@ -275,6 +298,9 @@ class Quirc_IRC_Client(QWidget):
 		write_to_display(self,"")
 		write_to_display(self,"Enter a command to connect to IRC!")
 		display_help(self)
+
+		if CREATE_LINKS:
+			self.chat_display.setOpenExternalLinks(True)
 			
 		# Channel user list
 		self.user_list = QListWidget(self)
@@ -283,6 +309,8 @@ class Quirc_IRC_Client(QWidget):
 		self.user_list.setFont(userfont)
 		self.user_list.installEventFilter(self)
 
+		#self.irc_input.setText("/connect localhost 6667")
+
 		if HIGH_CONTRAST:
 			self.chat_display.setStyleSheet("QTextBrowser { background-color: #000000; color: white }")
 			self.user_list.setStyleSheet("QListWidget { background-color: #000000; color: white }")
@@ -290,6 +318,7 @@ class Quirc_IRC_Client(QWidget):
 			self.setStyleSheet("QWidget { background-color: #000000; color: white }")
 			self.channel.setStyleSheet("QLabel { background-color: #000000; color: white }")
 			self.topic.setStyleSheet("QLabel { background-color: #000000; color: white }")
+			self.server.setStyleSheet("QLabel { background-color: #000000; color: white }")
 
 		if RUN_IN_GADGET_MODE:
 			if GADGET_ALWAYS_ON_TOP:
@@ -305,6 +334,8 @@ class Quirc_IRC_Client(QWidget):
 					)
 
 			self.setGeometry(QtCore.QRect(GADGET_X, GADGET_Y, GADGET_WIDTH, GADGET_HEIGHT))
+		else:
+			self.setGeometry(QtCore.QRect(100, 100, self.chat_display.width()+self.user_list.width()+25, self.chat_display.height()+self.channel.height()+self.irc_input.height()))
 
 		self.show()
 
@@ -373,6 +404,27 @@ class Quirc_IRC_Client(QWidget):
 					return True
 
 		if (event.type() == QtCore.QEvent.ContextMenu and
+				source is self.server):
+			if not CONNECTED: return True
+
+			menu = QMenu()
+			copyServer = menu.addAction('Copy server to clipboard')
+			copyServer2 = menu.addAction('Copy server URL to clipboard')
+			action = menu.exec_(self.server.mapToGlobal(event.pos()))
+
+			if action == copyServer:
+				cb = QApplication.clipboard()
+				cb.clear(mode=cb.Clipboard )
+				cb.setText(f"{SERVER}:{PORT}", mode=cb.Clipboard)
+				return True
+
+			if action == copyServer2:
+				cb = QApplication.clipboard()
+				cb.clear(mode=cb.Clipboard )
+				cb.setText(f"irc://{SERVER}:{PORT}", mode=cb.Clipboard)
+				return True
+
+		if (event.type() == QtCore.QEvent.ContextMenu and
 				source is self.topic):
 
 			if not CONNECTED: return True
@@ -421,8 +473,8 @@ class Quirc_IRC_Client(QWidget):
 				msgAct = menu.addAction('Send message')
 				noticeAct = menu.addAction('Send notice')
 				menu.addSeparator()
-				whoisAct = menu.addAction('Whois user')
-				whoisCAct = menu.addAction('Whois channel')
+				whoisAct = menu.addAction('WHOIS user')
+				whoisCAct = menu.addAction('WHOIS channel')
 				menu.addSeparator()
 				copyAct = menu.addAction('Copy users to clipboard')
 				action = menu.exec_(self.user_list.mapToGlobal(event.pos()))
@@ -464,12 +516,12 @@ class Quirc_IRC_Client(QWidget):
 
 				if action == whoisAct:
 					bot.whois(target)
-					system_msg_display(self,f"Requested whois data for {target}")
+					system_msg_display(self,f"Requested WHOIS data for {target}")
 					return True
 
 				if action == whoisCAct:
 					bot.whois(CHANNEL)
-					system_msg_display(self,f"Requested whois data for {CHANNEL}")
+					system_msg_display(self,f"Requested WHOIS data for {CHANNEL}")
 					return True
 
 				if action == copyAct:
@@ -489,8 +541,8 @@ class Quirc_IRC_Client(QWidget):
 				msgAct = menu.addAction('Send message')
 				noticeAct = menu.addAction('Send notice')
 				menu.addSeparator()
-				whoisAct = menu.addAction('Whois user')
-				whoisCAct = menu.addAction('Whois channel')
+				whoisAct = menu.addAction('WHOIS user')
+				whoisCAct = menu.addAction('WHOIS channel')
 				menu.addSeparator()
 				copyAct = menu.addAction('Copy users to clipboard')
 				action = menu.exec_(self.user_list.mapToGlobal(event.pos()))
@@ -501,12 +553,12 @@ class Quirc_IRC_Client(QWidget):
 
 				if action == whoisAct:
 					bot.whois(target)
-					system_msg_display(self,f"Requested whois data for {target}")
+					system_msg_display(self,f"Requested WHOIS data for {target}")
 					return True
 
 				if action == whoisCAct:
 					bot.whois(CHANNEL)
-					system_msg_display(self,f"Requested whois data for {CHANNEL}")
+					system_msg_display(self,f"Requested WHOIS data for {CHANNEL}")
 					return True
 
 				if action == msgAct:
@@ -544,19 +596,19 @@ class QuircClientConnection(irc.IRCClient):
 		global CONNECTED
 		CONNECTED = True
 		irc.IRCClient.connectionMade(self)
-		ircform.changeTitle(f"Connecting to {SERVER}:{PORT}")
+		ircform.server.setText(f"Connecting to {SERVER}:{PORT}")
 		system_msg_display(ircform,f"Connecting to {SERVER}:{PORT}")
 
 	def connectionLost(self, reason):
 		global CONNECTED
 		CONNECTED = False
 		system_msg_display(ircform,"Connection lost.")
-		update_window_title(ircform)
+		update_server_label(ircform)
 		irc.IRCClient.connectionLost(self, reason)
 
 	def signedOn(self):
 		system_msg_display(ircform,"Connected!")
-		update_window_title(ircform)
+		update_server_label(ircform)
 		self.join(CHANNEL, CHANNEL_PASSWORD)
 
 	def joined(self, channel):
@@ -567,6 +619,7 @@ class QuircClientConnection(irc.IRCClient):
 	def privmsg(self, user, target, msg):
 		pnick = user.split('!')[0]
 		phostmask = user.split('!')[1]
+
 		if target != self.nickname:
 			chat_msg_display(ircform,pnick,msg)
 		else:
@@ -650,7 +703,7 @@ class QuircClientConnection(irc.IRCClient):
 		global NICKNAME
 		NICKNAME = f"{NICKNAME}{random.randint(100, 999)}"
 		self.setNick(NICKNAME)
-		update_window_title(ircform)
+		update_server_label(ircform)
 
 	def userRenamed(self, oldname, newname):
 		system_msg_display(ircform,f"User {oldname} changed their nick to {newname}")
@@ -660,7 +713,7 @@ class QuircClientConnection(irc.IRCClient):
 		global TOPIC
 		system_msg_display(ircform,f"User {user} set topic on {channel} to '{newTopic}'")
 		if newTopic == "" or newTopic.isspace():
-			TOPIC = "No topic"
+			TOPIC = NO_TOPIC
 			ircform.topic.setText(f"{TOPIC}")
 			return
 		TOPIC = newTopic
@@ -697,7 +750,7 @@ class QuircClientConnection(irc.IRCClient):
 			TOPIC = params[2]
 			ircform.topic.setText(f"{TOPIC}")
 		else:
-			TOPIC = "No topic"
+			TOPIC = NO_TOPIC
 			ircform.topic.setText(f"{TOPIC}")
 
 	def irc_RPL_WHOISCHANNELS(self, prefix, params):
@@ -811,6 +864,18 @@ def fetch_userlist(irc_obj):
 # =====================
 # | SUPPORT FUNCTIONS |
 # =====================
+
+def format_links(txt):
+	urls = re.findall('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', txt)
+
+	# scrub html
+	clean = re.compile('<.*?>')
+	txt = re.sub(clean, '', txt)
+	
+	for u in urls:
+		link = f"<b><i><a href=\"{u}\">{u}</a></i></b>"
+		txt = txt.replace(u,link)
+	return txt
 
 def pretty_time(t):
 	sec = timedelta(seconds=(int(t)))
@@ -988,7 +1053,7 @@ def handle_commands(obj,text):
 		bot.setNick(NICKNAME)
 		fetch_userlist(bot)
 		system_msg_display(obj,f"You are now known as {NICKNAME}")
-		update_window_title(ircform)
+		update_server_label(ircform)
 		return True
 
 	if len(tokens) >= 1 and tokens[0] == "/quit":
@@ -1085,9 +1150,13 @@ def handle_user_input( obj, text ):
 	bot.msg(CHANNEL,text,length=450)
 
 def private_msg_display( obj, user, text ):
+	if CREATE_LINKS:
+		text = format_links(text)
 	obj.chat_display.append(f"{PRIVATE_MESSAGE_SYMBOL}<b><font color={PRIVATE_MESSAGE_COLOR}><u>{user}</u></font>  </b>{text}\n")
 
 def chat_msg_display( obj, user, text ):
+	if CREATE_LINKS:
+		text = format_links(text)
 	obj.chat_display.append(f"{PUBLIC_MESSAGE_SYMBOL}<font color={PUBLIC_MESSAGE_COLOR}><b><u>{user}</u></b></font>  {text}\n")
 
 def system_msg_display( obj, text ):
@@ -1132,11 +1201,11 @@ def remove_from_user_list( obj, text ):
 		for item in items:
 			obj.user_list.takeItem(obj.user_list.row(item))
 
-def update_window_title(obj):
+def update_server_label(obj):
 	if CONNECTED:
-		obj.changeTitle(f"{NICKNAME} - {SERVER}:{PORT}")
+		obj.server.setText(f"Connected to {SERVER}:{PORT}")
 	else:
-		obj.changeTitle(f"Disconnected")
+		obj.server.setText(" ")
 
 # ================
 # | MAIN PROGRAM |

@@ -1,0 +1,10 @@
+
+Version 0.01629
+	* Started changelog
+	* Changed "whois" in the GUI to "WHOIS"
+	* Added link detection (chat is scanned for URLs; URLs are changed to links)
+	* Added a command-line option to turn off link detection
+	* HTML tags are now stripped from chat
+	* Display of what server is connected to is now on GUI rather than window title
+	* Window title now displays application name and version
+	* Added right click menu for server display (copy server or server URL to clipboard)
