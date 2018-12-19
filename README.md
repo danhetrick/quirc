@@ -88,6 +88,6 @@ When running as a gadget, **Quirc** adds a couple of client commands to change t
 
 To close the gadget, use the `/exit` command.
 
-## Example Quirc Usage
+## Quirc GUI
 
-![Quirc Usage](https://github.com/danhetrick/quirc/blob/master/quirc_usage.gif?raw=true)
+![Quirc GUI](https://github.com/danhetrick/quirc/blob/master/quirc_gui_guide.png?raw=true)
