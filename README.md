@@ -26,9 +26,9 @@ If pyOpenSSL is not installed, SSL connections will not be possible; only comman
     -p, --password KEY              Key required to join channel
     -f, --font FONT			Set display font (default: "Courier New")
     -C, --highcontrast              Quirc will use a high contrast color set
-    -l, --nolinks               Turn off URL detection in chat
-    -m, --maxlength NUMBER      Sets the maximum size of sent messages (default:450)
-    -s, --script FILENAME       Sets a script to execute on start
+    -l, --nolinks                   Turn off URL detection in chat
+    -m, --maxlength NUMBER          Sets the maximum size of sent messages (default:450)
+    -s, --script FILENAME           Sets a script to execute on start
 
 Once up and running, **Quirc** runs like any other graphical IRC client you might have used.
 
