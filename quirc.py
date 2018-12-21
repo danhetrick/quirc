@@ -16,7 +16,7 @@
 # ===========================
 
 APPLICATION = "Quirc"
-VERSION = "0.01640"
+VERSION = "0.01643"
 DESCRIPTION = "A Python3/Qt5 IRC client"
 
 # ========================
@@ -56,6 +56,10 @@ CREATE_LINKS = True
 
 MAXIMUM_IRC_MESSAGE_LENGTH = 450
 
+STARTUP_SCRIPT = ''
+
+SCRIPT_VARIABLES = []
+
 # ================================
 # | HANDLE COMMANDLINE ARGUMENTS |
 # ================================
@@ -83,6 +87,8 @@ parser.add_argument("-l","--nolinks", help="Don't change URLs in chat to links",
 
 parser.add_argument("-m","--maxlength", help="Maximum character length of IRC messages sent  (default: 450)", type=int)
 
+parser.add_argument("-s","--script", help="Script to run on startup")
+
 args = parser.parse_args()
 
 if args.nick:
@@ -108,6 +114,9 @@ if args.highcontrast:
 if args.maxlength:
 	MAXIMUM_IRC_MESSAGE_LENGTH = args.maxlength
 
+if args.script:
+	STARTUP_SCRIPT = args.script
+
 if args.gadget:
 	RUN_IN_GADGET_MODE = True
 	if args.x:
@@ -129,6 +138,7 @@ import sys
 import random
 from datetime import datetime, timedelta
 import re
+import time
 
 from PyQt5.QtWidgets import *
 app = QApplication(sys.argv)
@@ -214,21 +224,70 @@ LOGO = """ ██████╗ ██╗   ██╗██╗█████�
 ╚██████╔╝╚██████╔╝██║██║  ██║╚██████╗
  ╚══▀▀═╝  ╚═════╝ ╚═╝╚═╝  ╚═╝ ╚═════╝"""
 
+SCRIPT_COMMENT_SYMBOL = ';'
+
+UPTIME = 0
+
 # ============================
 # | GRAPHICAL USER INTERFACE |
 # ============================
+
+class UptimeThread(QThread):
+
+	def __init__(self):
+		QThread.__init__(self)
+
+	def run(self):
+		global UPTIME
+		while 1:
+			time.sleep(1)
+			UPTIME = UPTIME + 1
+
+class DelayThread(QThread):
+	signal = pyqtSignal('PyQt_PyObject')
+
+	def __init__(self):
+		QThread.__init__(self)
+		self.code = ''
+		self.time = 0
+
+	def run(self):
+		global UPTIME
+		thingy = [self, self.code]
+		while 1:
+			if UPTIME >= self.time:
+				self.signal.emit(thingy)
+				break
 
 class Quirc_IRC_Client(QWidget):
 
 	def __init__(self):
 		super().__init__()
 		self.createQuircUI()
+		# Start uptime thread
+		self.uthread = UptimeThread()
+		self.uthread.start()
+		self.delayed_scripts = []
 
 	#def keyPressEvent(self,event):
 		#if event.key() == Qt.Key_Up:
 			#print("Got key up!")
 		#if event.key() == Qt.Key_Down:
 			#print("Got key down!")
+
+	def delay_script(self,t,text):
+		dthread = DelayThread()
+		dthread.code = text
+		dthread.time = UPTIME + t
+		dthread.signal.connect(self.delayed)
+		dthread.start()
+		self.delayed_scripts.append(dthread)
+
+	def delayed(self,thingy):
+		obj = thingy[0]
+		code = thingy[1]
+		handle_commands(self,code)
+		del obj
 
 	# Handle window resizing
 	def resizeEvent(self,resizeEvent):
@@ -245,8 +304,9 @@ class Quirc_IRC_Client(QWidget):
 		self.server.setGeometry(QtCore.QRect(text_x, -5, output_width+user_width+5, self.channel.height()))
 
 	def user_input(self):
-		handle_user_input(self,self.irc_input.text())
+		txt = self.irc_input.text()
 		self.irc_input.setText('')
+		handle_user_input(self,txt)
 
 	def closeEvent(self, event):
 		app.quit()
@@ -782,8 +842,8 @@ class QuircClientConnection(irc.IRCClient):
 		signed_on = params.pop(0)
 
 		idle_time = pretty_time(idle_time)
-		signed_on = pretty_time(signed_on)
-		whois_msg_display(ircform,f"{nick} has been connected for {signed_on}")
+		signed_on = datetime.fromtimestamp(int(signed_on)).strftime("%A, %B %d, %Y %I:%M:%S")
+		whois_msg_display(ircform,f"{nick} connected on {signed_on}")
 		whois_msg_display(ircform,f"{nick} has been idle for {idle_time}")
 
 	def irc_RPL_WHOISSERVER(self, prefix, params):
@@ -999,6 +1059,7 @@ def sort_nicks(nicklist):
 	return sortnicks
 
 def display_help(obj):
+	global FIRST_START_UP
 
 	write_to_display(obj,f"<font style=\"background-color:gray;\"><br><b>{APPLICATION} {VERSION} Commands</b><br>")
 
@@ -1011,7 +1072,12 @@ def display_help(obj):
 		write_to_display(obj,"<font style=\"background-color:gray;\"><b>/move X Y</b>               -  <i>Moves the IRC gadget</i>")
 		write_to_display(obj,"<font style=\"background-color:gray;\"><b>/size WIDTH HEIGHT</b>      -  <i>Resizes the IRC gadget</i>")
 
-	write_to_display(obj,"<font style=\"background-color:gray;\"><b>/script</b> FILENAME      -  <i>Loads a list of Quirc commands from a file and executes them</i>")
+	if not FIRST_START_UP:
+		write_to_display(obj,"<font style=\"background-color:gray;\"><b>/script</b> FILENAME      -  <i>Loads a list of Quirc commands from a file and executes them</i>")
+		write_to_display(obj,"<font style=\"background-color:gray;\"><b>/delay</b> TIME COMMAND      -  <i>Delays execution of a command by TIME seconds</i>")
+		write_to_display(obj,"<font style=\"background-color:gray;\"><b>/var</b> NAME VALUE      -  <i>Creates a script variable</i>")
+	else:
+		FIRST_START_UP = False
 
 	if not CONNECTED: return
 	write_to_display(obj,"<font style=\"background-color:gray;\"><b>/nick</b> NEWNICK        -  <i>Change nickname</i></p>")
@@ -1031,6 +1097,7 @@ def display_help(obj):
 	write_to_display(obj,"<font style=\"background-color:gray;\"><b>/quit</b> [MESSAGE]      -  <i>Quits IRC</i>")
 	write_to_display(obj,"<font style=\"background-color:gray;\"><b>/time</b>                -  <i>Requests the server date/time</i>")
 	write_to_display(obj,"<font style=\"background-color:gray;\"><b>/info</b>                -  <i>Requests the server info text</i>")
+	write_to_display(obj,"<font style=\"background-color:gray;\"><b>/uptime</b>                -  <i>Displays application uptime</i>")
 	write_to_display(obj,"<font style=\"background-color:gray;\"><b>/raw</b> [MESSAGE]      -  <i>Sends an unaltered message to the server</i>")
 	write_to_display(obj,"<font style=\"background-color:gray;\"><b>/print</b> [TEXT]      -  <i>Prints text on the chat display</i>")
 	if CLIENT_IS_OPERATOR:
@@ -1039,7 +1106,51 @@ def display_help(obj):
 		write_to_display(obj,"<font style=\"background-color:gray;\"><b>/nokey</b>               -  <i>Unsets the current channel's key</i>")
 	write_to_display(obj,"<font style=\"background-color:gray;\"><br>To send more than one command at a time, chain them together with \"&&\"<br>")
 
+def add_script_variable(var,val):
+	global SCRIPT_VARIABLES
+	found = False
+	lv = []
+	for v in SCRIPT_VARIABLES:
+		if v[0] == var:
+			v[1] = val
+			lv.append(v)
+			found = True
+		else:
+			lv.append(v)
+	if found:
+		SCRIPT_VARIABLES = lv
+		return
+	e = [var,val]
+	lv.append(e)
+	SCRIPT_VARIABLES = lv
+
+def interpolate_variables(txt):
+	global SERVER
+	global PORT
+	global CHANNEL
+	global NICKNAME
+	global UPTIME
+	global SCRIPT_VARIABLES
+	iserv = re.compile(re.escape('$server'), re.IGNORECASE)
+	txt = iserv.sub(SERVER,txt)
+	iport = re.compile(re.escape('$port'), re.IGNORECASE)
+	txt = iport.sub(str(PORT),txt)
+	ichan = re.compile(re.escape('$channel'), re.IGNORECASE)
+	txt = ichan.sub(CHANNEL,txt)
+	inick = re.compile(re.escape('$nickname'), re.IGNORECASE)
+	txt = inick.sub(NICKNAME,txt)
+	itime = re.compile(re.escape('$uptime'), re.IGNORECASE)
+	txt = itime.sub(str(UPTIME),txt)
+
+	for v in SCRIPT_VARIABLES:
+		iv = re.compile(re.escape(f"${v[0]}"), re.IGNORECASE)
+		txt = iv.sub(v[1],txt)
+
+	return txt
+
 def handle_commands(obj,text):
+	text = text.strip()
+	text = interpolate_variables(text)
 	tokens = text.split()
 	global NICKNAME
 	global CHANNEL
@@ -1053,16 +1164,47 @@ def handle_commands(obj,text):
 	if '&&' in text:
 		cmds = text.split('&&')
 		for c in cmds:
+			c = c.strip()
 			if not handle_commands(obj,c):
 				error_msg_display(obj,f"Error executing command: \"{c}\"")
 				return True
 		return True
 
+	if len(tokens) >= 3 and tokens[0] == "/var":
+		tokens.pop(0)
+		var = tokens.pop(0)
+		val = ' '.join(tokens)
+		add_script_variable(var,val)
+		return True
+
+	if len(tokens) >= 3 and tokens[0] == "/delay":
+		tokens.pop(0)
+		t = int(tokens.pop(0))
+		c = ' '.join(tokens)
+		obj.delay_script(t,c)
+		return True
+
+	if len(tokens) == 1 and tokens[0] == '/script':
+		fname, _ = QFileDialog.getOpenFileName(obj,"Open Quirc Script", "","All Files (*);;Text Files (*.txt);;Quirc Script Files (*.quirc)")
+		if(fname):
+			obj.irc_input.setText(f"/script {fname}")
+		return True
+
 	if len(tokens) == 2 and tokens[0] == '/script':
 		script = open(tokens[1],"r")
 		for line in script:
+			line = line.strip()
+			# Handle script comments
+			if len(line) >= 1 and line[0] == SCRIPT_COMMENT_SYMBOL:
+				continue
+			if SCRIPT_COMMENT_SYMBOL in line:
+				i = line.find(SCRIPT_COMMENT_SYMBOL)
+				line = line[:i]
+			# Blank line
+			if len(line) == 0: continue
+			# Execution
 			if not handle_commands(obj,line):
-				error_msg_display(obj,f"Error executing scripted command: \"{c}\"")
+				error_msg_display(obj,f"Error executing scripted command: \"{line}\"")
 				return True
 		return True
 
@@ -1078,8 +1220,8 @@ def handle_commands(obj,text):
 				CONNECTED = False
 				empty_userlist(obj)
 				obj.channel.setText("")
-				obj.topic.setText("No topic")
-				obj.changeTitle("Disconnected")
+				obj.topic.setText(f"{NO_TOPIC}")
+				system_msg_display(obj,"Disconnected.")
 			SERVER = tokens[1]
 			PORT = tokens[2]
 			bot = QuircConnectionFactory()
@@ -1092,12 +1234,17 @@ def handle_commands(obj,text):
 			CONNECTED = False
 			empty_userlist(obj)
 			obj.channel.setText("")
-			obj.topic.setText("No topic")
-			obj.changeTitle("Disconnected")
+			obj.topic.setText(f"{NO_TOPIC}")
+			system_msg_display(obj,"Disconnected.")
 		SERVER = tokens[1]
 		PORT = tokens[2]
 		bot = QuircConnectionFactory()
 		reactor.connectTCP(SERVER, int(PORT), bot)
+		return True
+
+	if len(tokens) == 1 and tokens[0] == "/uptime":
+		t = pretty_time(UPTIME)
+		system_msg_display(obj,f"Uptime: {str(t)}")
 		return True
 
 	if len(tokens) >= 1 and tokens[0] == "/help":
@@ -1256,14 +1403,14 @@ def handle_commands(obj,text):
 			bot.quit(message=MSG)
 			empty_userlist(obj)
 			obj.channel.setText("")
-			obj.changeTitle("Disconnected")
-			obj.topic.setText("No topic")
+			system_msg_display(obj,"Disconnected.")
+			obj.topic.setText(f"{NO_TOPIC}")
 		else:
 			bot.quit()
 			empty_userlist(obj)
 			obj.channel.setText("")
-			obj.changeTitle("Disconnected")
-			obj.topic.setText("No topic")
+			system_msg_display(obj,"Disconnected.")
+			obj.topic.setText(f"{NO_TOPIC}")
 		return True
 
 	if len(tokens) >= 2 and tokens[0] == "/join":
@@ -1271,6 +1418,7 @@ def handle_commands(obj,text):
 			bot.part(CHANNEL)
 			CHANNEL = tokens[1]
 			obj.channel.setText(" ")
+			obj.topic.setText(f"{NO_TOPIC}")
 			bot.join(CHANNEL)
 		elif len(tokens) > 2:
 			tokens.pop(0)
@@ -1279,6 +1427,7 @@ def handle_commands(obj,text):
 			tokens.pop(0)
 			cKey = " ".join(tokens)
 			obj.channel.setText(" ")
+			obj.topic.setText(f"{NO_TOPIC}")
 			bot.join(CHANNEL,key=cKey)
 		return True
 
@@ -1414,7 +1563,13 @@ def update_server_label(obj):
 # ================
 
 if __name__ == '__main__':
+	global FIRST_START_UP
+	FIRST_START_UP = True
+
 	global ircform
 	ircform = Quirc_IRC_Client()
+
+	if STARTUP_SCRIPT != '':
+		handle_commands(ircform,f"/script {STARTUP_SCRIPT}")
 
 	reactor.run()

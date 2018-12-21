@@ -28,6 +28,7 @@ If pyOpenSSL is not installed, SSL connections will not be possible; only comman
     -C, --highcontrast              Quirc will use a high contrast color set
     -l, --nolinks       Turn off URL detection in chat
     -m, --maxlength NUMBER  Sets the maximum size of sent messages (default:450)
+    -s, --script FILENAME   Sets a script to execute on start
 
 Once up and running, **Quirc** runs like any other graphical IRC client you might have used.
 
@@ -35,7 +36,9 @@ Once up and running, **Quirc** runs like any other graphical IRC client you migh
 
     /connect SERVER PORT    Connects to an IRC server
     /ssl SERVER PORT        Connects to an IRC server via SSL (requires pyOpenSSL)
-    /script FILENAME        Loads a list of commands from a file and executes them
+    /script [FILENAME]        Loads a list of commands from a file and executes them
+    /var NAME VALUE         Creates a script variable
+    /delay TIME COMMAND     Delays the execution of a command by TIME seconds
     /nick NICKNAME          Changes the client's nickname
     /msg TARGET MESSAGE     Sends a private or channel message
     /me ACTION              Sends a CTCP action message
@@ -64,6 +67,16 @@ If the client has operator status, there are three more commands available:
 
 Right clicking on the user list will show a menu with available commands, as will right clicking on the channel name (at the top right of the window) or the topic display (at the top left).
 
+Commands can contain "variables". To inject client information into commands, use the following:
+
+    $server         The hostname of the server currently connected to
+    $port           The server port connected to
+    $uptime         The client uptime
+    $channel        The client's current channel
+    $nickname       The client's current nickname
+
+Variable names are case-insensitive. A reference to "$server" is the same as a reference to "$SERVER" is the same as a reference to "$sErVeR".
+
 Multiple commands can be issued at once by chaining them together with "&&". For example, to join channel #foo, say hello, and leave the channel and join #bar, you could use:
 
 ```
@@ -87,6 +100,49 @@ When running as a gadget, **Quirc** adds a couple of client commands to change t
     /size WIDTH HEIGHT      Resizes the Quirc gadget
 
 To close the gadget, use the `/exit` command.
+
+## Quirc Scripting
+
+The `/script` command can load a list of commands from a text file.  If the `/script` command is issued without any arguments, a "file open" dialog is used to get a file name to load; the client input is then set to `/script` with the file name. Hit enter to execute the script.
+
+Commands *must* be entered as you would in the client; that is, each command begins with a `/`.
+
+Lines that begin with a `;` are considered comments, and are ignored.  If a `;` appears anywhere else in a line, all text after it is ignored.
+
+Variables can be created with the `/var` command; the first argument to `/var` is the name of the variable, and everything after the name is set as that variable's value.  Any created script variables are automatically interpolated into command input; put a '$' in front of the variable's name to substitute any references to that variable with that variable's value. All variable names are case-insensitive.
+
+```
+/var greeting Hello, world! ; Create a variable for our greeting
+/var my_friend bob_jones    ; Create a variable for our private message target
+
+/msg $my_friend $greeting   ; /msg bob_jones Hello, world!
+```
+
+Scripts can also execute the contents of a variable as a command.
+
+```
+/var connect_to_undernet /connect irc.undernet.org 6667 ; Set a variable's value to the command we want to execute
+$connect_to_undernet                                    ; Execute the command
+```
+
+## Example Quirc Script
+
+For the purpose of an example, let's assume you want to connect to your favorite channel on Undernet, `#quirc`. Your nick is registered with channel services; your username is "quirc", and your password is "changeme". You'll be auto-opped in `#quirc` as soon as you join the channel. You want to connect to IRC, log into channel services, join `#quirc`, and let everyone know you've arrived automatically.
+
+```
+; My #quirc Script
+
+/print My #quirc Script Version 1.0
+
+/connect irc.undernet.org 6667                          ; Connect to the server
+
+/delay 20 /msg X@channels.undernet.org quirc changeme   ; Wait around for 20 seconds to make sure
+                                                        ; we've connected, and then log into channel services
+
+/delay 25 /join #quirc                                  ; Join #quirc a few seconds after we log in
+
+/delay 30 /msg $channel Hello, everybody!               ; Send a message shortly after we join
+```
 
 ## Quirc GUI
 

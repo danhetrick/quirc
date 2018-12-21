@@ -1,3 +1,16 @@
+Version 0.01643
+	* Calling /script with no arguments opens up a "file open" dialog
+	* Scripts can comment lines or data with ';'
+	* Added $server, $port, $channel, and $nickname as interpolated variables
+	* All command input is interpolated
+	* Added /uptime command (displays application uptime in seconds)
+	* Added interpolated variable $uptime
+	* Added /delay command (/delay SECONDS CMD)
+	* Fixed a bug in WHOIS data display (sign on time is now displayed correctly)
+	* Added the ability to load a script on startup
+	* Added /var command
+	* User variables are interpolated into command text
+
 Version 0.01640
 	* Fixed /invite command
 	* Added /version command
