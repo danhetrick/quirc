@@ -26,9 +26,9 @@ If pyOpenSSL is not installed, SSL connections will not be possible; only comman
     -p, --password KEY              Key required to join channel
     -f, --font FONT			Set display font (default: "Courier New")
     -C, --highcontrast              Quirc will use a high contrast color set
-    -l, --nolinks       Turn off URL detection in chat
-    -m, --maxlength NUMBER  Sets the maximum size of sent messages (default:450)
-    -s, --script FILENAME   Sets a script to execute on start
+    -l, --nolinks               Turn off URL detection in chat
+    -m, --maxlength NUMBER      Sets the maximum size of sent messages (default:450)
+    -s, --script FILENAME       Sets a script to execute on start
 
 Once up and running, **Quirc** runs like any other graphical IRC client you might have used.
 
@@ -36,7 +36,7 @@ Once up and running, **Quirc** runs like any other graphical IRC client you migh
 
     /connect SERVER PORT    Connects to an IRC server
     /ssl SERVER PORT        Connects to an IRC server via SSL (requires pyOpenSSL)
-    /script [FILENAME]        Loads a list of commands from a file and executes them
+    /script [FILENAME]      Loads a list of commands from a file and executes them
     /var NAME VALUE         Creates a script variable
     /delay TIME COMMAND     Delays the execution of a command by TIME seconds
     /nick NICKNAME          Changes the client's nickname
@@ -107,7 +107,7 @@ The `/script` command can load a list of commands from a text file.  If the `/sc
 
 Commands *must* be entered as you would in the client; that is, each command begins with a `/`.
 
-Lines that begin with a `;` are considered comments, and are ignored.  If a `;` appears anywhere else in a line, all text after it is ignored.
+Lines that begin with a `;` are considered comments, and are ignored.  If a `;` appears anywhere else in a line, `;` and all text after it is ignored.
 
 Variables can be created with the `/var` command; the first argument to `/var` is the name of the variable, and everything after the name is set as that variable's value.  Any created script variables are automatically interpolated into command input; put a '$' in front of the variable's name to substitute any references to that variable with that variable's value. All variable names are case-insensitive.
 
