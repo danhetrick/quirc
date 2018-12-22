@@ -1,3 +1,18 @@
+Version 0.01650
+	* Added /kick command
+	* Added /motd command
+	* Added /lusers command
+	* Documented HTML tag use with the /print command
+	* Added /stats command
+	* Added /trace command
+	* Added /admin command
+	* Added /online command
+	* Added /edit command
+	* Added a new display color, and message mode
+	* Changed message display types for consistancy
+	* Completely revamped help system
+	* If /var is called with only two arguments, the variable with the first argument as its name has its value displayed
+
 Version 0.01643
 	* Calling /script with no arguments opens up a "file open" dialog
 	* Scripts can comment lines or data with ';'

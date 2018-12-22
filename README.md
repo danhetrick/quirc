@@ -29,38 +29,49 @@ If pyOpenSSL is not installed, SSL connections will not be possible; only comman
     -l, --nolinks                   Turn off URL detection in chat
     -m, --maxlength NUMBER          Sets the maximum size of sent messages (default:450)
     -s, --script FILENAME           Sets a script to execute on start
+    -e, --editor FILENAME           Sets a text editor to use with the /edit command (default: notepad)
 
 Once up and running, **Quirc** runs like any other graphical IRC client you might have used.
 
+If an incoming chat message contains a web URL, the URL will be converted into a link; clicking on the link will open up the URL in the default web browser.
+
 ## Quirc Client Commands
 
-    /connect SERVER PORT    Connects to an IRC server
-    /ssl SERVER PORT        Connects to an IRC server via SSL (requires pyOpenSSL)
-    /script [FILENAME]      Loads a list of commands from a file and executes them
-    /var NAME VALUE         Creates a script variable
-    /delay TIME COMMAND     Delays the execution of a command by TIME seconds
-    /nick NICKNAME          Changes the client's nickname
-    /msg TARGET MESSAGE     Sends a private or channel message
-    /me ACTION              Sends a CTCP action message
-    /join CHANNEL [KEY]     Joins a new channel, and leaves the current one
-    /mode TARGET MODE ARGS  Sets a channel or user mode
-    /oper USER PASSWORD     Logs into an IRCop account
-    /list [CHANNEL] [...]   Requests channel list information
-    /away [MESSAGE]         Sets status to "away"
-    /back                   Sets status to "back"
-    /invite NICK CHANNEL    Invites a user to a channel
-    /whois USER             Request WHOIS information from the server
-    /whowas USER            Requests WHOWAS information from the server
-    /who TERMS              Search for users
-    /time                   Requests the server's date/time
-    /version                Requests the server's software version
-    /info                   Requests the server's info text
-    /raw MESSAGE            Sends an unaltered message to the IRC server
-    /quit [MESSAGE]         Disconnects from IRC server
-    /exit                   Disconnects from IRC server and exits Quirc
+    /connect SERVER PORT                    Connects to an IRC server
+    /ssl SERVER PORT                        Connects to an IRC server via SSL (requires pyOpenSSL)
+    /script [FILENAME]                      Loads a list of commands from a file and executes them
+    /edit FILENAME                          Opens a text file for editing
+    /var NAME VALUE                         Creates a script variable
+    /delay TIME COMMAND                     Delays the execution of a command by TIME seconds
+    /online COMMAND                         Delays the execution of a command until the client is connected to a server
+    /nick NICKNAME                          Changes the client's nickname
+    /msg TARGET MESSAGE                     Sends a private or channel message
+    /me ACTION                              Sends a CTCP action message
+    /join CHANNEL [KEY]                     Joins a new channel, and leaves the current one
+    /mode TARGET MODE ARGS                  Sets a channel or user mode
+    /oper USER PASSWORD                     Logs into an IRCop account
+    /list [CHANNEL] [...]                   Requests channel list information
+    /away [MESSAGE]                         Sets status to "away"
+    /back                                   Sets status to "back"
+    /invite NICK CHANNEL                    Invites a user to a channel
+    /whois USER                             Request WHOIS information from the server
+    /whowas USER                            Requests WHOWAS information from the server
+    /who TERMS                              Search for users
+    /time                                   Requests the server's date/time
+    /version                                Requests the server's software version
+    /info                                   Requests the server's info text
+    /motd                                   Requests the server's MOTD
+    /lusers [MASK] [TARGET]                 Requests LUSER information from the server
+    /stats servers|commands|ops|uptime      Requests stats from the server
+    /trace [TARGET]                         Requests trace information from the network
+    /admin [TARGET]                         Requests admin information from the server
+    /raw MESSAGE                            Sends an unaltered message to the IRC server
+    /quit [MESSAGE]                         Disconnects from IRC server
+    /exit                                   Disconnects from IRC server and exits Quirc
 
 If the client has operator status, there are three more commands available:
 
+    /kick NICKNAME [REASON] Kicks a user from the current channel
     /topic TEXT             Sets the channel's topic
     /key TEXT               Sets the channel's key
     /nokey                  Removes a channel's key
@@ -123,6 +134,15 @@ Scripts can also execute the contents of a variable as a command.
 ```
 /var connect_to_undernet /connect irc.undernet.org 6667 ; Set a variable's value to the command we want to execute
 $connect_to_undernet                                    ; Execute the command
+```
+
+The IRC chat display can display basic HTML tags, such as bold (`<b>`), italic (`<i>`), and header text (`<h1>`).  While HTML is stripped from all incoming IRC messages, HTML *can* be used with the `/print` command.
+
+```
+/print <h1>Hello, world!</h1>                   ; Prints "Hello, world!" in large text
+/print <b>Hello, world</b>                      ; Prints a bolded "Hello, world!"
+/print <i>Hello, world</i>                      ; Prints an italicized "Hello, world!"
+/print <h1><b><i>Hello, world!</i></b></h1>     ; Nested HTML is allowed
 ```
 
 ## Example Quirc Script
