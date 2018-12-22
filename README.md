@@ -154,9 +154,14 @@ For the purpose of an example, let's assume you want to connect to your favorite
 
 /print My #quirc Script Version 1.0
 
+; Create some variables
+/var username quirc
+/var password changeme
+/var chanserv X@channels.undernet.org
+
 /connect irc.undernet.org 6667                          ; Connect to the server
 
-/delay 20 /msg X@channels.undernet.org quirc changeme   ; Wait around for 20 seconds to make sure
+/delay 20 /msg $chanserv $username $password            ; Wait around for 20 seconds to make sure
                                                         ; we've connected, and then log into channel services
 
 /delay 25 /join #quirc                                  ; Join #quirc a few seconds after we log in
