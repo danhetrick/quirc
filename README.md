@@ -30,53 +30,23 @@ If pyOpenSSL is not installed, SSL connections will not be possible; only comman
     -m, --maxlength NUMBER          Sets the maximum size of sent messages (default:450)
     -s, --script FILENAME           Sets a script to execute on start
     -e, --editor FILENAME           Sets a text editor to use with the /edit command (default: notepad)
+    -L, --log FILENAME              Logs all chat to file
 
 Once up and running, **Quirc** runs like any other graphical IRC client you might have used.
 
 If an incoming chat message contains a web URL, the URL will be converted into a link; clicking on the link will open up the URL in the default web browser.
 
+Chat logs use a simple format:
+
+```
+<timestamp> <location> <sender> <message>
+```
+
+`timestamp` marks when the message was sent/received in the number of seconds since January 1st, 1970 (UNIX time) in UTC. `location` can be a channel name (for public chat), `PRIVATE` for incoming private messages, `PRIVATE->` followed by a nickname or channel for outgoing private messages, `NOTICE` for incoming notices, `NOTICE->` followed by a nickname or channel for outgoing notices, or `ACTION->` followed by a channel name for a CTCP action sent or received. `sender` will either be the client's nickname (for outgoing public chat) or a nick@host (for incoming public chat). `message` will be the contents of the message.
+
 ## Quirc Client Commands
 
-    /connect SERVER PORT                    Connects to an IRC server
-    /ssl SERVER PORT                        Connects to an IRC server via SSL (requires pyOpenSSL)
-    /script [FILENAME]                      Loads a list of commands from a file and executes them
-    /edit FILENAME                          Opens a text file for editing
-    /var NAME VALUE                         Creates a script variable
-    /delay TIME COMMAND                     Delays the execution of a command by TIME seconds
-    /online COMMAND                         Delays the execution of a command until the client is connected to a server
-    /nick NICKNAME                          Changes the client's nickname
-    /msg TARGET MESSAGE                     Sends a private or channel message
-    /me ACTION                              Sends a CTCP action message
-    /join CHANNEL [KEY]                     Joins a new channel, and leaves the current one
-    /mode TARGET MODE ARGS                  Sets a channel or user mode
-    /oper USER PASSWORD                     Logs into an IRCop account
-    /list [CHANNEL] [...]                   Requests channel list information
-    /away [MESSAGE]                         Sets status to "away"
-    /back                                   Sets status to "back"
-    /invite NICK CHANNEL                    Invites a user to a channel
-    /whois USER                             Request WHOIS information from the server
-    /whowas USER                            Requests WHOWAS information from the server
-    /who TERMS                              Search for users
-    /time                                   Requests the server's date/time
-    /version                                Requests the server's software version
-    /info                                   Requests the server's info text
-    /motd                                   Requests the server's MOTD
-    /lusers [MASK] [TARGET]                 Requests LUSER information from the server
-    /stats servers|commands|ops|uptime      Requests stats from the server
-    /trace [TARGET]                         Requests trace information from the network
-    /admin [TARGET]                         Requests admin information from the server
-    /raw MESSAGE                            Sends an unaltered message to the IRC server
-    /quit [MESSAGE]                         Disconnects from IRC server
-    /exit                                   Disconnects from IRC server and exits Quirc
-
-If the client has operator status, there are three more commands available:
-
-    /kick NICKNAME [REASON] Kicks a user from the current channel
-    /topic TEXT             Sets the channel's topic
-    /key TEXT               Sets the channel's key
-    /nokey                  Removes a channel's key
-
-Right clicking on the user list will show a menu with available commands, as will right clicking on the channel name (at the top right of the window) or the topic display (at the top left).
+Quirc features almost all of the commands expected of an IRC client. For a list of commands and usage information, use the `/help` command.
 
 Commands can contain "variables". To inject client information into commands, use the following:
 
@@ -159,14 +129,14 @@ For the purpose of an example, let's assume you want to connect to your favorite
 /var password changeme
 /var chanserv X@channels.undernet.org
 
-/connect irc.undernet.org 6667                          ; Connect to the server
+/connect irc.undernet.org 6667                  ; Connect to the server
 
-/delay 20 /msg $chanserv $username $password            ; Wait around for 20 seconds to make sure
-                                                        ; we've connected, and then log into channel services
+/delay 20 /msg $chanserv $username $password    ; Wait around for 20 seconds to make sure
+                                                ; we've connected, and then log into channel services
 
-/delay 25 /join #quirc                                  ; Join #quirc a few seconds after we log in
+/delay 25 /join #quirc                          ; Join #quirc a few seconds after we log in
 
-/delay 30 /msg $channel Hello, everybody!               ; Send a message shortly after we join
+/delay 30 /say Hello, everybody!                ; Send a message shortly after we join
 ```
 
 ## Quirc GUI

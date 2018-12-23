@@ -1,3 +1,12 @@
+Version 0.1653
+	* Added /say command
+	* Added --log option and chat logging
+	* If chat is sent to the current channel with /msg, it will no longer appear as a private message
+	* If anything is printed to the display, the display will "move" to show the next printed data
+	* Added input buffer memory (arrow keys can move up and down between previously entered commands)
+	* Unified printing theme for all server-related information messages
+	* Completely revamped the help system (help is now HTML-based)
+
 Version 0.01650
 	* Added /kick command
 	* Added /motd command
