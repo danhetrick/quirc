@@ -1,4 +1,19 @@
-Version 0.1653
+Version 0.01661
+	* HTML is stripped from all incoming chat/notices by default
+	* Added --html option to stop stripping HTML from incoming chat/notices
+	* Client now allows non-ops to try to set topic
+	* Commands issued with the wrong number of arguments are now provided usage info
+	* Commands are now case-insensitive
+	* Added optional host check (a test ping is sent, and if the send fails or doesn't return, /connect or /ssl fail)
+	* Server-sent information messages are now clearly marked
+	* Client no longer checks if the user is an op before allowing them to use the /topic command or context menu topic change entry
+	* User display is now sorted alphabetically (ops first, voiced second, everyone else third)
+	* Fixed broken QUIT message display (Twisted documentation for IRC is really...not good)
+	* Changed how text is formatted for display
+	* Removed "LUSER: Unknown" notification
+	* Added a fun holiday display for Christmas, New Years, and Halloween
+
+Version 0.01653
 	* Added /say command
 	* Added --log option and chat logging
 	* If chat is sent to the current channel with /msg, it will no longer appear as a private message

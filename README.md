@@ -1,5 +1,6 @@
 # Quirc
-A Python/Qt5 IRC client
+A Python3/Qt5 IRC client. The latest version is **0.01661**.
+
 ## Requirements
 **Quirc** requires Python 3, Twisted, and Qt5. Installing the requirements is as easy and opening a terminal and executing:
 
@@ -31,18 +32,21 @@ If pyOpenSSL is not installed, SSL connections will not be possible; only comman
     -s, --script FILENAME           Sets a script to execute on start
     -e, --editor FILENAME           Sets a text editor to use with the /edit command (default: notepad)
     -L, --log FILENAME              Logs all chat to file
+    -S, --html                      Do *not* strip HTML from incoming chat/notices 
+    -o, --online                    Check if hosts responds to ping before connection
+    -T, --timestamp                 Timestamp chat messages
 
 Once up and running, **Quirc** runs like any other graphical IRC client you might have used.
 
-If an incoming chat message contains a web URL, the URL will be converted into a link; clicking on the link will open up the URL in the default web browser.
+If an incoming chat message contains a web URL, the URL will be converted into a link; clicking on the link will open up the URL in the default web browser.  This can be prevented with the `--nolinks` option.
 
 Chat logs use a simple format:
 
 ```
-<timestamp> <location> <sender> <message>
+<timestamp> <source> <sender> <message>
 ```
 
-`timestamp` marks when the message was sent/received in the number of seconds since January 1st, 1970 (UNIX time) in UTC. `location` can be a channel name (for public chat), `PRIVATE` for incoming private messages, `PRIVATE->` followed by a nickname or channel for outgoing private messages, `NOTICE` for incoming notices, `NOTICE->` followed by a nickname or channel for outgoing notices, or `ACTION->` followed by a channel name for a CTCP action sent or received. `sender` will either be the client's nickname (for outgoing public chat) or a nick@host (for incoming public chat). `message` will be the contents of the message.
+`timestamp` marks when the message was sent/received in the number of seconds since January 1st, 1970 (UNIX time) in UTC. `source` can be a channel name (for public chat), `PRIVATE` for incoming private messages, `PRIVATE->` followed by a nickname or channel for outgoing private messages, `NOTICE` for incoming notices, `NOTICE->` followed by a nickname or channel for outgoing notices, or `ACTION->` followed by a channel name for a CTCP action sent or received. `sender` will either be the client's nickname (for outgoing public chat) or a nick@host (for incoming public chat). `message` will be the contents of the message.
 
 ## Quirc Client Commands
 
@@ -127,16 +131,16 @@ For the purpose of an example, let's assume you want to connect to your favorite
 ; Create some variables
 /var username quirc
 /var password changeme
-/var chanserv X@channels.undernet.org
+/var login_to_chanserv /msg X@channels.undernet.org $username $password
 
-/connect irc.undernet.org 6667                  ; Connect to the server
+/connect irc.undernet.org 6667      ; Connect to the server
 
-/delay 20 /msg $chanserv $username $password    ; Wait around for 20 seconds to make sure
-                                                ; we've connected, and then log into channel services
+/delay 20 $login_to_chanserv        ; Wait around for 20 seconds to make sure
+                                    ; we've connected, and then log into channel services
 
-/delay 25 /join #quirc                          ; Join #quirc a few seconds after we log in
+/delay 25 /join #quirc              ; Join #quirc a few seconds after we log in
 
-/delay 30 /say Hello, everybody!                ; Send a message shortly after we join
+/delay 30 /say Hello, everybody!    ; Send a message shortly after we join
 ```
 
 ## Quirc GUI

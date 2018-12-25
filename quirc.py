@@ -16,7 +16,7 @@
 # ===========================
 
 APPLICATION = "Quirc"
-VERSION = "0.01653"
+VERSION = "0.01661"
 DESCRIPTION = "A Python3/Qt5 IRC client"
 
 # ========================
@@ -55,6 +55,9 @@ STARTUP_SCRIPT = ''
 SCRIPT_VARIABLES = []
 SCRIPT_EDITOR = 'notepad'
 LOG_CHAT = False
+STRIP_HTML = True
+CHECK_HOST_EXISTS = False
+TIMESTAMP_CHAT = False
 
 # ================================
 # | HANDLE COMMANDLINE ARGUMENTS |
@@ -81,8 +84,14 @@ parser.add_argument("-m","--maxlength", help="Maximum character length of IRC me
 parser.add_argument("-s","--script", help="Script to run on startup")
 parser.add_argument("-e","--editor", help="Program to edit scripts (default: notepad)")
 parser.add_argument("-L","--log", help="Log all chat to file")
+parser.add_argument("-S","--html", help="Do *not* strip HTML from incoming chat", action='store_true')
+parser.add_argument("-o","--online", help="Check if host responds to ping before connection", action='store_true')
+parser.add_argument("-T","--timestamp", help="Timestamp chat messages", action='store_true')
 
 args = parser.parse_args()
+
+if args.timestamp:
+	TIMESTAMP_CHAT = True
 
 if args.nick:
 	NICKNAME = args.nick
@@ -117,6 +126,9 @@ if args.log:
 	LOG_CHAT = True
 	LOG = open(args.log,"a")
 
+if args.html:
+	STRIP_HTML = False
+
 if args.gadget:
 	RUN_IN_GADGET_MODE = True
 	if args.x:
@@ -130,6 +142,9 @@ if args.gadget:
 	if args.ontop:
 		GADGET_ALWAYS_ON_TOP = True
 
+if args.online:
+	CHECK_HOST_EXISTS = True
+
 # ===================
 # | LIBRARY IMPORTS |
 # ===================
@@ -141,6 +156,7 @@ import re
 import time
 import os.path
 import subprocess
+import platform
 
 from PyQt5.QtWidgets import *
 app = QApplication(sys.argv)
@@ -191,6 +207,29 @@ window_height = output_height + input_height + text_y
 
 CHANNEL_USER_LIST = []
 CONNECTED = False
+CLIENT_IS_OPERATOR = False
+CLIENT_IS_AWAY = False
+NO_TOPIC = " "
+TOPIC = NO_TOPIC
+CHANNEL_KEY = CHANNEL_PASSWORD
+SCRIPT_COMMENT_SYMBOL = ';'
+UPTIME = 0
+
+LOGO = """ ██████╗ ██╗   ██╗██╗██████╗  ██████╗
+██╔═══██╗██║   ██║██║██╔══██╗██╔════╝
+██║   ██║██║   ██║██║██████╔╝██║     
+██║▄▄ ██║██║   ██║██║██╔══██╗██║     
+╚██████╔╝╚██████╔╝██║██║  ██║╚██████╗
+ ╚══▀▀═╝  ╚═════╝ ╚═╝╚═╝  ╚═╝ ╚═════╝"""
+
+INPUT_BUFFER = ['']
+INPUT_BUFFER_POINTER = 0
+INPUT_BUFFER_MAX = 20
+NICK_OR_INFO_TYPE_DISPLAY_SIZE = 10
+
+# ==================
+# | COLOR SETTINGS |
+# ==================
 
 PUBLIC_MESSAGE_COLOR = "blue"
 PRIVATE_MESSAGE_COLOR = "magenta"
@@ -216,32 +255,11 @@ NOTICE_MESSAGE_SYMBOL = f"<font color=\"{NOTICE_MESSAGE_COLOR}\">&#9679;</font> 
 SERVER_INFORMATION_SYMBOL = f"<font color=\"{SERVER_INFORMATION_MESSAGE_COLOR}\">&#9679;</font> "
 ERROR_MESSAGE_SYMBOL = f"<font color=\"{ERROR_MESSAGE_COLOR}\">&#9679;</font> "
 
-#HELP_DISPLAY = "<font style=\"background-color:gray;\" color=\"white\">"
-#HELP_TITLE_DISPLAY = "<div align=\"center\"><font style=\"background-color:royalblue;\" color=\"yellow\">"
 HELP_TITLE_DISPLAY = "<font style=\"background-color:royalblue;\" color=\"yellow\">"
 HELP_TITLE_DISPLAY_CLOSE = "</font></div>"
 
 SMALL_BR_SIZE = 2
 SMALL_BR = f"<div style=\"height:{SMALL_BR_SIZE}px;font-size:{SMALL_BR_SIZE}px;\">&nbsp;</div>"
-
-CLIENT_IS_OPERATOR = False
-CLIENT_IS_AWAY = False
-NO_TOPIC = " "
-TOPIC = NO_TOPIC
-CHANNEL_KEY = CHANNEL_PASSWORD
-SCRIPT_COMMENT_SYMBOL = ';'
-UPTIME = 0
-
-LOGO = """ ██████╗ ██╗   ██╗██╗██████╗  ██████╗
-██╔═══██╗██║   ██║██║██╔══██╗██╔════╝
-██║   ██║██║   ██║██║██████╔╝██║     
-██║▄▄ ██║██║   ██║██║██╔══██╗██║     
-╚██████╔╝╚██████╔╝██║██║  ██║╚██████╗
- ╚══▀▀═╝  ╚═════╝ ╚═╝╚═╝  ╚═╝ ╚═════╝"""
-
-INPUT_BUFFER = ['']
-INPUT_BUFFER_POINTER = 0
-INPUT_BUFFER_MAX = 20
 
 # ============================
 # | GRAPHICAL USER INTERFACE |
@@ -294,7 +312,6 @@ class Quirc_IRC_Client(QWidget):
 	def __init__(self):
 		super().__init__()
 		self.createQuircUI()
-		# Start uptime thread
 		self.uthread = UptimeThread()
 		self.uthread.start()
 		self.delayed_scripts = []
@@ -423,9 +440,6 @@ class Quirc_IRC_Client(QWidget):
 		self.chat_display.anchorClicked.connect(self.linkClicked)
 
 		startup_help(self)
-
-		# if CREATE_LINKS:
-		# 	self.chat_display.setOpenExternalLinks(True)
 			
 		# Channel user list
 		self.user_list = QListWidget(self)
@@ -456,7 +470,6 @@ class Quirc_IRC_Client(QWidget):
 					QtCore.Qt.FramelessWindowHint |
 					QtCore.Qt.Tool
 					)
-
 			self.setGeometry(QtCore.QRect(GADGET_X, GADGET_Y, GADGET_WIDTH, GADGET_HEIGHT))
 		else:
 			self.setGeometry(QtCore.QRect(100, 100, self.chat_display.width()+self.user_list.width()+25, self.chat_display.height()+self.channel.height()+self.irc_input.height()))
@@ -567,32 +580,21 @@ class Quirc_IRC_Client(QWidget):
 
 			if not CONNECTED: return True
 
-			if CLIENT_IS_OPERATOR:
-				menu = QMenu()
-				setTopic = menu.addAction('Set Topic')
-				copyTopic = menu.addAction('Copy topic to clipboard')
-				action = menu.exec_(self.topic.mapToGlobal(event.pos()))
+			menu = QMenu()
+			setTopic = menu.addAction('Set Topic')
+			copyTopic = menu.addAction('Copy topic to clipboard')
+			action = menu.exec_(self.topic.mapToGlobal(event.pos()))
 
-				if action == setTopic:
-						self.irc_input.setText("/topic ")
-						self.irc_input.setFocus()
-						return True
+			if action == setTopic:
+					self.irc_input.setText("/topic ")
+					self.irc_input.setFocus()
+					return True
 
-				if action == copyTopic:
-						cb = QApplication.clipboard()
-						cb.clear(mode=cb.Clipboard )
-						cb.setText(TOPIC, mode=cb.Clipboard)
-						return True
-			else:
-				menu = QMenu()
-				copyTopic = menu.addAction('Copy topic to clipboard')
-				action = menu.exec_(self.topic.mapToGlobal(event.pos()))
-
-				if action == copyTopic:
-						cb = QApplication.clipboard()
-						cb.clear(mode=cb.Clipboard )
-						cb.setText(TOPIC, mode=cb.Clipboard)
-						return True
+			if action == copyTopic:
+					cb = QApplication.clipboard()
+					cb.clear(mode=cb.Clipboard )
+					cb.setText(TOPIC, mode=cb.Clipboard)
+					return True
 
 		if CLIENT_IS_OPERATOR:
 			if (event.type() == QtCore.QEvent.ContextMenu and
@@ -763,6 +765,9 @@ class QuircClientConnection(irc.IRCClient):
 		pnick = user.split('!')[0]
 		phostmask = user.split('!')[1]
 
+		if STRIP_HTML:
+			msg = scrub_html(msg)
+
 		if target != self.nickname:
 			chat_msg_display(ircform,pnick,msg)
 			if LOG_CHAT:
@@ -780,6 +785,10 @@ class QuircClientConnection(irc.IRCClient):
 		else:
 			pnick = user
 			phostmask = user
+
+		if STRIP_HTML:
+			message = scrub_html(message)
+
 		notice_msg_display(ircform,pnick,message)
 		if LOG_CHAT:
 			LOG.write(f"{timestamp()} NOTICE {user} {msg}\n")
@@ -836,9 +845,9 @@ class QuircClientConnection(irc.IRCClient):
 					system_msg_display(ircform,f"Client mode -{m} set")
 		
 
-	def userQuit(self, user, quitMessage):
-		system_msg_display(ircform,f"{user} quit IRC {quitMessage}")
-		fetch_userlist(self)
+	# def userQuit(self, user, quitMessage):
+	# 	system_msg_display(ircform,f"{user} quit IRC {quitMessage}")
+	# 	fetch_userlist(self)
 
 	def userJoined(self, user, channel):
 		system_msg_display(ircform,f"{user} joined {channel}")
@@ -883,6 +892,21 @@ class QuircClientConnection(irc.IRCClient):
 		system_msg_display(ircform,f"Joining {DEFAULT_CHANNEL}")
 		self.join(DEFAULT_CHANNEL)
 
+	def irc_QUIT(self,prefix,params):
+		fetch_userlist(self)
+		x = prefix.split('!')
+		if len(x) >= 2:
+			nick = x[0]
+		else:
+			nick = prefix
+		if len(params) >=1:
+			m = params[0].split(':')
+			if len(m)>=2:
+				msg = m[1].strip()
+				system_msg_display(ircform,f"{nick} quit IRC ({msg})")
+			else:
+				system_msg_display(ircform,f"{nick} quit IRC")
+
 	def irc_RPL_NAMREPLY(self, prefix, params):
 		channel = params[2].lower()
 		nicklist = params[3].split(' ')
@@ -893,8 +917,8 @@ class QuircClientConnection(irc.IRCClient):
 		ulist = sort_nicks(CHANNEL_USER_LIST)
 		empty_userlist(ircform)
 		for nick in ulist:
+			if len(nick) == 0: continue
 			add_to_user_list(ircform,nick)
-
 
 	def irc_RPL_TOPIC(self, prefix, params):
 		global TOPIC
@@ -909,14 +933,14 @@ class QuircClientConnection(irc.IRCClient):
 		params.pop(0)
 		nick = params.pop(0)
 		channels = ", ".join(params)
-		server_info_msg_display(ircform,f"{nick} is in {channels}")
+		server_info_msg_display(ircform,"WHOIS",f"{nick} is in {channels}")
 
 	def irc_RPL_WHOISUSER(self, prefix, params):
 		nick = params[1]
 		username = params[2]
 		host = params[3]
 		realname = params[5]
-		server_info_msg_display(ircform,f"{nick}({username})'s host is {host}")
+		server_info_msg_display(ircform,"WHOIS",f"{nick}({username})'s host is {host}")
 
 	def irc_RPL_WHOISIDLE(self, prefix, params):
 		params.pop(0)
@@ -926,28 +950,28 @@ class QuircClientConnection(irc.IRCClient):
 
 		idle_time = pretty_time(idle_time)
 		signed_on = datetime.fromtimestamp(int(signed_on)).strftime("%A, %B %d, %Y %I:%M:%S")
-		server_info_msg_display(ircform,f"{nick} connected on {signed_on}")
-		server_info_msg_display(ircform,f"{nick} has been idle for {idle_time}")
+		server_info_msg_display(ircform,"WHOIS",f"{nick} connected on {signed_on}")
+		server_info_msg_display(ircform,"WHOIS",f"{nick} has been idle for {idle_time}")
 
 	def irc_RPL_WHOISSERVER(self, prefix, params):
 		nick = params[1]
 		server = params[2]
-		server_info_msg_display(ircform,f"{nick} is connected to {server}")
+		server_info_msg_display(ircform,"WHOIS",f"{nick} is connected to {server}")
 
 	def irc_RPL_ENDOFWHOIS(self, prefix, params):
 		nick = params[1]
-		server_info_msg_display(ircform,f"End of whois data for {nick}")
+		server_info_msg_display(ircform,"WHOIS",f"End of whois data for {nick}")
 
 	def irc_RPL_WHOWASUSER(self, prefix, params):
 		nick = params[1]
 		username = params[2]
 		host = params[3]
 		realname = params[5]
-		server_info_msg_display(ircform,f"{nick}({username})'s host was {host}")
+		server_info_msg_display(ircform,"WHOWAS",f"{nick}({username})'s host was {host}")
 
 	def irc_RPL_ENDOFWHOWAS(self, prefix, params):
 		nick = params[1]
-		server_info_msg_display(ircform,f"End of whowas data for {nick}")
+		server_info_msg_display(ircform,"WHOWAS",f"End of whowas data for {nick}")
 
 	def irc_RPL_WHOREPLY(self, prefix, params):
 		channel = params[1]
@@ -959,44 +983,44 @@ class QuircClientConnection(irc.IRCClient):
 		if len(hr) >= 2:
 			hopcount = hr[0]
 			realname = hr[1]
-			server_info_msg_display(ircform,f"{channel} {nick}: Username: {username}, Realname: {realname}, Host: {host}, Server: {server}, Hops: {hopcount}")
+			server_info_msg_display(ircform,"WHO",f"{channel} {nick}: Username: {username}, Realname: {realname}, Host: {host}, Server: {server}, Hops: {hopcount}")
 		else:
-			server_info_msg_display(ircform,f"{channel} {nick}: Username: {username}, Host: {host}, Server: {server}")
+			server_info_msg_display(ircform,"WHO",f"{channel} {nick}: Username: {username}, Host: {host}, Server: {server}")
 
 	def irc_RPL_ENDOFWHO(self, prefix, params):
 		nick = params[1]
-		server_info_msg_display(ircform,f"End of who data for {nick}")
+		server_info_msg_display(ircform,"WHO",f"End of who data for {nick}")
 
 	def irc_RPL_INVITING(self, prefix, params):
 		channel = params[1]
 		nick = params[2]
-		server_info_msg_display(ircform,f"Invitation to {channel} sent to {nick}")
+		system_msg_display(ircform,f"Invitation to {channel} sent to {nick}")
 
 	def irc_RPL_VERSION(self, prefix, params):
 		sversion = params[1]
 		server = params[2]
-		server_info_msg_display(ircform,f"Server version: {sversion}")
+		server_info_msg_display(ircform,"VERSION",f"Server version: {sversion}")
 
 	def irc_RPL_CHANNELMODEIS(self, prefix, params):
 		channel = params[1]
 		if params[2] == '+' or params[2] == '-':
-			server_info_msg_display(ircform,f"{channel} has no modes set")
+			server_info_msg_display(ircform,"MODE",f"{channel} has no modes set")
 			return
 		modes = f"{params[2]} {params[3]}"
-		server_info_msg_display(ircform,f"{channel} mode(s): {modes}")
+		server_info_msg_display(ircform,"MODE",f"{channel} mode(s): {modes}")
 
 	def irc_RPL_YOUREOPER(self, prefix, params):
 		system_msg_display(ircform,f"You are now an IRC operator")
 
 	def irc_RPL_TIME(self, prefix, params):
 		t = params[2]
-		server_info_msg_display(ircform,f"Server time/date: {t}")
+		server_info_msg_display(ircform,"TIME",f"Server time/date: {t}")
 
 	def irc_RPL_INFO(self, prefix, params):
-		server_info_msg_display(ircform,f"{params[1]}")
+		server_info_msg_display(ircform,"INFO",f"{params[1]}")
 
 	def irc_RPL_ENDOFINFO(self, prefix, params):
-		server_info_msg_display(ircform,f"End of info data")
+		server_info_msg_display(ircform,"INFO","End of info data")
 
 	def irc_RPL_LIST(self, prefix, params):
 		chan = params[1]
@@ -1004,40 +1028,37 @@ class QuircClientConnection(irc.IRCClient):
 		topic = params[3]
 		if topic == ' ':
 			if int(crowd) > 1:
-				server_info_msg_display(ircform,f"{chan} ({crowd} users)")
+				server_info_msg_display(ircform,"LIST",f"{chan} ({crowd} users)")
 			else:
-				server_info_msg_display(ircform,f"{chan} (1 user)")
+				server_info_msg_display(ircform,"LIST",f"{chan} (1 user)")
 		else:
 			topic = topic.strip()
 			if int(crowd) > 1:
-				server_info_msg_display(ircform,f"{chan} ({crowd} users): \"{topic}\"")
+				server_info_msg_display(ircform,"LIST",f"{chan} ({crowd} users): \"{topic}\"")
 			else:
-				server_info_msg_display(ircform,f"{chan} ({crowd} users): \"{topic}\"")
+				server_info_msg_display(ircform,"LIST",f"{chan} ({crowd} user): \"{topic}\"")
 
 	def irc_RPL_LISTSTART(self, prefix, params):
-		server_info_msg_display(ircform,f"Start of list data")
+		server_info_msg_display(ircform,"LIST",f"Start of list data")
 
 	def irc_RPL_LISTEND(self, prefix, params):
-		server_info_msg_display(ircform,f"End of list data")
+		server_info_msg_display(ircform,"LIST",f"End of list data")
 
 	def irc_RPL_LUSERCLIENT(self, prefix, params):
 		msg = params[1]
-		server_info_msg_display(ircform,f"LUSER Clients: {msg}")
-
-	def irc_RPL_LUSERUNKNOWN(self, prefix, params):
-		error_msg_display(ircform,f"LUSER Unknown")
+		server_info_msg_display(ircform,"LUSER",f"Clients: {msg}")
 
 	def irc_RPL_LUSERME(self, prefix, params):
 		msg = params[1]
-		server_info_msg_display(ircform,f"LUSER This server: {msg}")
+		server_info_msg_display(ircform,"LUSER",f"This server: {msg}")
 
 	def irc_RPL_LUSEROP(self, prefix, params):
 		msg = params[1]
-		server_info_msg_display(ircform,f"LUSER Ops: {msg}")
+		server_info_msg_display(ircform,"LUSER",f"Ops: {msg}")
 
 	def irc_RPL_LUSERCHANNELS(self, prefix, params):
 		msg = params[1]
-		server_info_msg_display(ircform,f"LUSER Channels: {msg}")
+		server_info_msg_display(ircform,"LUSER",f"Channels: {msg}")
 
 	def irc_RPL_STATSLINKINFO(self, prefix, params):
 		linkname = params[1]
@@ -1047,24 +1068,24 @@ class QuircClientConnection(irc.IRCClient):
 		recvd_msg = params[5]
 		recvd_kb = params[6]
 		link_time = params[7]
-		server_info_msg_display(ircform,f"{SERVER} {linkname} link: {data_queue} queued data, {sent_msg} sent messages, {sent_kb} kilobytes sent, {recvd_msg} messages received, {recvd_kb} kilobytes received, connected for {link_time}")
+		server_info_msg_display(ircform,"STATS",f"{linkname} link: {data_queue} queued data, {sent_msg} sent messages, {sent_kb} kilobytes sent, {recvd_msg} messages received, {recvd_kb} kilobytes received, connected for {link_time}")
 
 	def irc_RPL_STATSCOMMANDS(self, prefix, params):
 		cmd = params[1]
 		count = params[2]
 		nbytes = params[3]
 		remote = params[4]
-		server_info_msg_display(ircform,f"{SERVER} Commands \"{cmd}\": {count} use(s), bytes {nbytes}, remote count: {remote}")
+		server_info_msg_display(ircform,"STATS",f"Commands \"{cmd}\": {count} use(s), bytes {nbytes}, remote count: {remote}")
 
 	def irc_RPL_STATSUPTIME(self, prefix, params):
-		server_info_msg_display(ircform,f"{SERVER} uptime: {params[1]}")
+		server_info_msg_display(ircform,"STATS",f"Uptime: {params[1]}")
 
 	def irc_RPL_STATSOLINE(self, prefix, params):
 		params.pop(0)
-		server_info_msg_display(ircform,f"{SERVER} O-line hosts: {' '.join(params)}")
+		server_info_msg_display(ircform,"STATS",f"O-line hosts: {' '.join(params)}")
 
 	def irc_RPL_ENDOFSTATS(self, prefix, params):
-		server_info_msg_display(ircform,f"End stat info for {SERVER}")
+		server_info_msg_display(ircform,"STATS",f"End stat info for {SERVER}")
 
 	def irc_RPL_TRACELINK(self, prefix, params):
 		vanddebug = params[1]
@@ -1074,78 +1095,78 @@ class QuircClientConnection(irc.IRCClient):
 		luptime = params[5]
 		back_queue = params[6]
 		up_queue = params[7]
-		server_info_msg_display(ircform,f"Trace: Link {vanddebug}, destination {dest}, next server {nexts}, protocol version {protocol}, link uptime {luptime}, backstream queue {back_queue}, upstream queue {up_queue}")
+		server_info_msg_display(ircform,"TRACE",f"Link {vanddebug}, destination {dest}, next server {nexts}, protocol version {protocol}, link uptime {luptime}, backstream queue {back_queue}, upstream queue {up_queue}")
 
 	def irc_RPL_TRACECONNECTING(self, prefix, params):
 		sclass = params[1]
 		server = params[2]
-		server_info_msg_display(ircform,f"Trace: Connecting {server}, {sclass}")
+		server_info_msg_display(ircform,"TRACE",f"Connecting {server}, {sclass}")
 
 	def irc_RPL_TRACEHANDSHAKE(self, prefix, params):
 		sclass = params[1]
 		server = params[2]
-		server_info_msg_display(ircform,f"Trace: Handshake {server}, {sclass}")
+		server_info_msg_display(ircform,"TRACE",f"Handshake {server}, {sclass}")
 
 	def irc_RPL_TRACEUNKNOWN(self, prefix, params):
 		sclass = params[1]
 		server = params[2]
-		server_info_msg_display(ircform,f"Trace: Unknown {server}, {sclass}")
+		server_info_msg_display(ircform,"TRACE",f"Unknown {server}, {sclass}")
 
 	def irc_RPL_TRACEOPERATOR(self, prefix, params):
 		sclass = params[1]
 		server = params[2]
-		server_info_msg_display(ircform,f"Trace: Operator {server}, {sclass}")
+		server_info_msg_display(ircform,"TRACE",f"Operator {server}, {sclass}")
 
 	def irc_RPL_TRACEUSER(self, prefix, params):
 		sclass = params[1]
 		server = params[2]
-		server_info_msg_display(ircform,f"Trace: User {server}, {sclass}")
+		server_info_msg_display(ircform,"TRACE",f"User {server}, {sclass}")
 
 	def irc_RPL_TRACESERVER(self, prefix, params):
 		sclass = params[1]
 		server = params[4]
 		nhm = params[5]
 		protocol = params[6]
-		server_info_msg_display(ircform,f"Trace: Server {server}, {sclass}, {nhm}, protocol {protocol}")
+		server_info_msg_display(ircform,"TRACE",f"Server {server}, {sclass}, {nhm}, protocol {protocol}")
 
 	def irc_RPL_TRACESERVICE(self, prefix, params):
 		sclass = params[1]
 		name = params[2]
 		ttype = params[3]
 		atype = params[4]
-		server_info_msg_display(ircform,f"Trace: Service {sclass}, {name}, type {ttype}, active type {atype}")
+		server_info_msg_display(ircform,"TRACE",f"Service {sclass}, {name}, type {ttype}, active type {atype}")
 
 	def irc_RPL_TRACENEWTYPE(self, prefix, params):
 		sclass = params[1]
 		name = params[2]
-		server_info_msg_display(ircform,f"Trace: New Type {sclass}, {name}")
+		server_info_msg_display(ircform,"TRACE",f"New Type {sclass}, {name}")
 
 	def irc_RPL_TRACECLASS(self, prefix, params):
 		sclass = params[1]
 		ccount = params[2]
-		server_info_msg_display(ircform,f"Trace: Class {sclass}, {ccount}")
+		server_info_msg_display(ircform,"TRACE",f"Class {sclass}, {ccount}")
 
 	def irc_RPL_TRACELOG(self, prefix, params):
 		logfile = params[1]
 		debugl = params[2]
-		server_info_msg_display(ircform,f"Trace: Log {logfile}, {debugl}")
+		server_info_msg_display(ircform,"TRACE",f"Log {logfile}, {debugl}")
 
 	def irc_RPL_TRACEEND(self, prefix, params):
 		server = params[1]
 		vers = params[2]
-		server_info_msg_display(ircform,f"End of trace information for {server} {vers}")
+		server_info_msg_display(ircform,"TRACE",f"End of trace information for {server} {vers}")
 
 	def irc_RPL_ADMINME(self,prefix,params):
-		server_info_msg_display(ircform,f"Administration: {params[1]}")
+		server_info_msg_display(ircform,"ADMIN",f"{params[1]}")
 
 	def irc_RPL_ADMINLOC1(self,prefix,params):
-		server_info_msg_display(ircform,f"Administration: {params[1]}")
+		server_info_msg_display(ircform,"ADMIN",f"{params[1]}")
 
 	def irc_RPL_ADMINLOC2(self,prefix,params):
-		server_info_msg_display(ircform,f"Administration: {params[1]}")
+		server_info_msg_display(ircform,"ADMIN",f"{params[1]}")
 
 	def irc_RPL_ADMINEMAIL(self,prefix,params):
-		server_info_msg_display(ircform,f"Administration: {params[1]}")
+		server_info_msg_display(ircform,"ADMIN",f"{params[1]}")
 
 	def lineReceived(self, line):
 		try:
@@ -1197,7 +1218,6 @@ class QuircClientConnection(irc.IRCClient):
 			error_msg_display(ircform,"Error: unknown MODE flag")
 		if "change mode for other users" in line2:
 			error_msg_display(ircform,"Permission denied (can't change mode for other users)")
-		#print(line)
 		return irc.IRCClient.lineReceived(self, line)
 
 class QuircConnectionFactory(protocol.ClientFactory):
@@ -1216,22 +1236,22 @@ class QuircConnectionFactory(protocol.ClientFactory):
 	def clientConnectionFailed(self, connector, reason):
 		pass
 
+# =====================
+# | SUPPORT FUNCTIONS |
+# =====================
+
 def fetch_userlist(irc_obj):
 	global CHANNEL_USER_LIST
 	CHANNEL_USER_LIST = []
 	irc_obj.sendLine("NAMES %s" % CHANNEL)
 
-# =====================
-# | SUPPORT FUNCTIONS |
-# =====================
+def scrub_html(txt):
+	clean = re.compile('<.*?>')
+	return re.sub(clean, '', txt)
 
 def format_links(txt):
 	urls = re.findall('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', txt)
 
-	# scrub html
-	clean = re.compile('<.*?>')
-	txt = re.sub(clean, '', txt)
-	
 	for u in urls:
 		link = f"<b><i><a href=\"{u}\">{u}</a></i></b>"
 		txt = txt.replace(u,link)
@@ -1251,6 +1271,7 @@ def sort_nicks(nicklist):
 	sortnicks = []
 	meop = f"@{NICKNAME}"
 	for nick in nicklist:
+		if nick.isspace(): continue
 		if nick == meop:
 			CLIENT_IS_OPERATOR = True
 		if '@' in nick:
@@ -1259,6 +1280,9 @@ def sort_nicks(nicklist):
 			voiced.append(nick)
 		else:
 			normal.append(nick)
+	ops = sorted(ops, key=str.lower)
+	voiced = sorted(voiced, key=str.lower)
+	normal = sorted(normal, key=str.lower)
 	for nick in ops:
 		sortnicks.append(nick)
 	for nick in voiced:
@@ -1310,6 +1334,11 @@ def interpolate_variables(txt):
 
 	return txt
 
+def is_host_online(host):
+	p = '-n' if platform.system().lower()=='windows' else '-c'
+	c = ['ping',p,'1',host]
+	return subprocess.call(c) == 0
+
 def handle_commands(obj,text):
 	text = text.strip()
 	uninterpolated_text = text.split()
@@ -1323,6 +1352,9 @@ def handle_commands(obj,text):
 	global bot
 	global SERVER
 	global PORT
+
+	if len(tokens) >= 1:
+		tokens[0] = tokens[0].lower()
 
 	if '&&' in text:
 		cmds = text.split('&&')
@@ -1343,6 +1375,10 @@ def handle_commands(obj,text):
 			error_msg_display(obj,f"File {val} can't be found or doesn't exist")
 		return True
 
+	if len(tokens) == 1 and tokens[0] == "/edit":
+		subprocess.Popen([f"{SCRIPT_EDITOR}"])
+		return True
+
 	if len(tokens) == 2 and tokens[0] == "/var":
 		for v in SCRIPT_VARIABLES:
 			if v[0] == tokens[1]:
@@ -1361,6 +1397,10 @@ def handle_commands(obj,text):
 			system_msg_display(obj,f"Variable \"{var}\" value changed")
 		return True
 
+	if len(tokens) >= 1 and tokens[0] == "/var":
+		error_msg_display(obj,"Usage: /var VARIABLE_NAME [VALUE]")
+		return True
+
 	if len(tokens) >= 3 and tokens[0] == "/delay":
 		tokens.pop(0)
 		t = int(tokens.pop(0))
@@ -1369,11 +1409,19 @@ def handle_commands(obj,text):
 		system_msg_display(obj,f"Added command delay ({t} seconds)")
 		return True
 
+	if len(tokens) >= 1 and tokens[0] == "/delay":
+		error_msg_display(obj,"Usage: /delay TIME COMMAND")
+		return True
+
 	if len(tokens) >= 3 and tokens[0] == "/online":
 		tokens.pop(0)
 		c = ' '.join(tokens)
 		obj.online_script(c)
 		system_msg_display(obj,f"Added command delay (execute on connect)")
+		return True
+
+	if len(tokens) >= 1 and tokens[0] == "/online":
+		error_msg_display(obj,"Usage: /online COMMAND")
 		return True
 
 	if len(tokens) == 1 and tokens[0] == '/script':
@@ -1401,13 +1449,25 @@ def handle_commands(obj,text):
 				return True
 		return True
 
+	if len(tokens) >= 1 and tokens[0] == "/script":
+		error_msg_display(obj,"Usage: /script [FILENAME]")
+		return True
+
 	if len(tokens) >= 2 and tokens[0] == "/print":
 		tokens.pop(0)
 		write_to_display(obj,f"{' '.join(tokens)}")
 		return True
 
+	if len(tokens) >= 1 and tokens[0] == "/print":
+		error_msg_display(obj,"Usage: /print TEXT")
+		return True
+
 	if IRC_SSL:
 		if len(tokens) == 3 and tokens[0] == "/ssl":
+			if CHECK_HOST_EXISTS:
+				if not is_host_online(tokens[1]):
+					error_msg_display(obj,"Host not responding to ping, connection stopped")
+					return True
 			if CONNECTED:
 				bot.quit()
 				CONNECTED = False
@@ -1419,10 +1479,20 @@ def handle_commands(obj,text):
 			PORT = tokens[2]
 			bot = QuircConnectionFactory()
 			reactor.connectSSL(SERVER,int(PORT),bot,ssl.ClientContextFactory())
-			system_msg_display(obj,f"Connecting to {SERVER}:{PORT} via SSL")
 			return True
 
+	if len(tokens) >= 1 and tokens[0] == "/ssl":
+		if IRC_SSL:
+			error_msg_display(obj,"Usage: /ssl HOST PORT")
+		else:
+			error_msg_displau(obj,"The /ssl command is not available")
+		return True
+
 	if len(tokens) == 3 and tokens[0] == "/connect":
+		if CHECK_HOST_EXISTS:
+			if not is_host_online(tokens[1]):
+					error_msg_display(obj,"Host not responding to ping, connection stopped")
+					return True
 		if CONNECTED:
 			bot.quit()
 			CONNECTED = False
@@ -1434,7 +1504,10 @@ def handle_commands(obj,text):
 		PORT = tokens[2]
 		bot = QuircConnectionFactory()
 		reactor.connectTCP(SERVER, int(PORT), bot)
-		system_msg_display(obj,f"Connecting to {SERVER}:{PORT}")
+		return True
+
+	if len(tokens) >= 1 and tokens[0] == "/connect":
+		error_msg_display(obj,"Usage: /connect HOST PORT")
 		return True
 
 	if len(tokens) == 1 and tokens[0] == "/uptime":
@@ -1442,12 +1515,15 @@ def handle_commands(obj,text):
 		system_msg_display(obj,f"Uptime: {str(t)}")
 		return True
 
+	if len(tokens) >= 1 and tokens[0] == "/uptime":
+		error_msg_display(obj,"Usage: /uptime")
+		return True
+
 	if len(tokens) == 1 and tokens[0] == "/help":
 		if not CONNECTED:
 			help_connection_commands(obj)
 		else:
 			help_basic_commands(obj)
-		#html_to_display(obj,f"<br>Other commands: {help_link_menu()}")
 		return True
 
 	if len(tokens) == 2 and tokens[0] == "/help":
@@ -1471,6 +1547,10 @@ def handle_commands(obj,text):
 		bot.sendLine(f"ADMIN {target}")
 		return True
 
+	if len(tokens) >= 1 and tokens[0] == "/admin":
+		error_msg_display(obj,"Usage: /admin [TARGET]")
+		return True
+
 	if len(tokens) == 1 and tokens[0] == "/trace":
 		bot.sendLine("TRACE")
 		return True
@@ -1478,6 +1558,10 @@ def handle_commands(obj,text):
 	if len(tokens) == 2 and tokens[0] == "/trace":
 		target = tokens[1]
 		bot.sendLine(f"TRACE {target}")
+		return True
+
+	if len(tokens) >= 1 and tokens[0] == "/trace":
+		error_msg_display(obj,"Usage: /trace [TARGET]")
 		return True
 
 	if len(tokens) >=2 and tokens[0] == "/stats":
@@ -1502,6 +1586,10 @@ def handle_commands(obj,text):
 		bot.sendLine(f"STATS {query}")
 		return True
 
+	if len(tokens) >= 1 and tokens[0] == "/stats":
+		error_msg_display(obj,"Usage: /stats servers|commands|ops|uptime")
+		return True
+
 	if len(tokens) >= 1 and tokens[0] == "/lusers":
 		if len(tokens) == 1 and tokens[0] == "/lusers":
 			bot.sendLine("LUSERS")
@@ -1517,8 +1605,16 @@ def handle_commands(obj,text):
 			return True
 		return True
 
+	if len(tokens) >= 1 and tokens[0] == "/lusers":
+		error_msg_display(obj,"Usage: /lusers [MASK] [TARGET]")
+		return True
+
 	if len(tokens) == 1 and tokens[0] == "/motd":
 		bot.sendLine("MOTD")
+		return True
+
+	if len(tokens) >= 1 and tokens[0] == "/motd":
+		error_msg_display(obj,"Usage: /motd")
 		return True
 
 	if len(tokens) >= 2 and tokens[0] == "/kick":
@@ -1536,24 +1632,38 @@ def handle_commands(obj,text):
 			system_msg_display(obj,f"Kicked {usr}")
 		return True
 
+	if len(tokens) >= 1 and tokens[0] == "/kick":
+		error_msg_display(obj,"Usage: /kick NICKNAME [REASON]")
+		return True
+
 	if len(tokens) >= 2 and tokens[0] == "/list":
 		tokens.pop(0)
 		chans = ','.join(tokens)
 		bot.sendLine(f"LIST {chans}")
-		system_msg_display(obj,f"Requested list data for {chans}")
 		return True
 
 	if len(tokens) == 1 and tokens[0] == "/list":
 		bot.sendLine(f"LIST")
-		system_msg_display(obj,f"Requested list data for all channels")
+		return True
+
+	if len(tokens) >= 1 and tokens[0] == "/list":
+		error_msg_display(obj,"Usage: /list [CHANNEL] [...]")
 		return True
 
 	if len(tokens) == 1 and tokens[0] == "/info":
 		bot.sendLine("INFO")
 		return True
 
+	if len(tokens) >= 1 and tokens[0] == "/info":
+		error_msg_display(obj,"Usage: /info")
+		return True
+
 	if len(tokens) == 1 and tokens[0] == "/time":
 		bot.sendLine("TIME")
+		return True
+
+	if len(tokens) >= 1 and tokens[0] == "/time":
+		error_msg_display(obj,"Usage: /time")
 		return True
 
 	if len(tokens) >= 3 and tokens[0] == "/oper":
@@ -1561,6 +1671,10 @@ def handle_commands(obj,text):
 		username = tokens.pop(0)
 		password = ' '.join(tokens)
 		bot.sendLine(f"OPER {username} {password}")
+		return True
+
+	if len(tokens) >= 1 and tokens[0] == "/oper":
+		error_msg_display(obj,"Usage: /oper USERNAME PASSWORD")
 		return True
 
 	if len(tokens) >= 1 and tokens[0] == "/mode":
@@ -1583,26 +1697,42 @@ def handle_commands(obj,text):
 			error_msg_display(obj,f"Unrecognized mode: {' '.join(tokens)}")
 			return True
 
+	if len(tokens) >= 1 and tokens[0] == "/mode":
+		error_msg_display(obj,"Usage: /mode [TARGET] [MODE] [ARGUMENTS]")
+		return True
+
 	if len(tokens) == 1 and tokens[0] == "/version":
 		bot.sendLine("VERSION")
-		system_msg_display(obj,f"Requested version data")
+		return True
+
+	if len(tokens) >= 1 and tokens[0] == "/version":
+		error_msg_display(obj,"Usage: /version")
 		return True
 
 	if len(tokens) >= 2 and tokens[0] == "/who":
 		tokens.pop(0)
 		bot.sendLine(f"WHO {' '.join(tokens)}")
-		system_msg_display(obj,f"Requested who data")
+		return True
+
+	if len(tokens) >= 1 and tokens[0] == "/who":
+		error_msg_display(obj,"Usage: /who USER")
 		return True
 
 	if len(tokens) == 2 and tokens[0] == "/whowas":
 		bot.sendLine(f"WHOWAS {tokens[1]}")
-		system_msg_display(obj,f"Requested whowas data for {NICKNAME}")
+		return True
+
+	if len(tokens) >= 1 and tokens[0] == "/whowas":
+		error_msg_display(obj,"Usage: /whowas USER")
 		return True
 
 	if len(tokens) == 2 and tokens[0] == "/whois":
 		NICKNAME = tokens[1]
 		bot.whois(NICKNAME)
-		system_msg_display(obj,f"Requested whois data for {NICKNAME}")
+		return True
+
+	if len(tokens) >= 1 and tokens[0] == "/whois":
+		error_msg_display(obj,"Usage: /whois USER")
 		return True
 
 	if len(tokens) == 2 and tokens[0] == "/invite":
@@ -1616,16 +1746,26 @@ def handle_commands(obj,text):
 		bot.sendLine(f"INVITE {target} {chan}")
 		return True
 
+	if len(tokens) >= 1 and tokens[0] == "/invite":
+		error_msg_display(obj,"Usage: /invite NICKNAME [CHANNEL]")
+		return True
+
 	if RUN_IN_GADGET_MODE:
 		if len(tokens) == 3 and tokens[0] == "/move":
 			new_x = int(tokens[1])
 			new_y = int(tokens[2])
 			obj.move(new_x,new_y)
 			return True
+		if len(tokens) >= 1 and tokens[0] == "/move":
+			error_msg_display(obj,"Usage: /move X_VALUE Y_VALUE")
+			return True
 		if len(tokens) == 3 and tokens[0] == "/size":
 			new_x = int(tokens[1])
 			new_y = int(tokens[2])
 			obj.resize(new_x,new_y)
+			return True
+		if len(tokens) >= 1 and tokens[0] == "/size":
+			error_msg_display(obj,"Usage: /size WIDTH HEIGHT")
 			return True
 
 	if len(tokens) == 1 and tokens[0] == "/back":
@@ -1661,10 +1801,22 @@ def handle_commands(obj,text):
 				system_msg_display(obj,"Status set to 'away'")
 			return True
 
+	if len(tokens) >= 1 and tokens[0] == "/away":
+		error_msg_display(obj,"Usage: /away [MESSAGE]")
+		return True
+
+	if len(tokens) >= 1 and tokens[0] == "/back":
+		error_msg_display(obj,"Usage: /back")
+		return True
+
 	if len(tokens) >= 2 and tokens[0] == "/raw":
 		tokens.pop(0)
 		MSG = " ".join(tokens)
 		bot.sendLine(MSG)
+		return True
+
+	if len(tokens) >= 1 and tokens[0] == "/raw":
+		error_msg_display(obj,"Usage: /raw COMMAND")
 		return True
 
 	if len(tokens) == 2 and tokens[0] == "/nick":
@@ -1675,11 +1827,15 @@ def handle_commands(obj,text):
 		update_server_label(ircform)
 		return True
 
+	if len(tokens) >= 1 and tokens[0] == "/nick":
+		error_msg_display(obj,"Usage: /nick NEW_NICKNAME")
+		return True
+
 	if len(tokens) >= 1 and tokens[0] == "/quit":
 		if len(tokens) > 1:
 			tokens.pop(0)
 			MSG = " ".join(tokens)
-			bot.quit(message=MSG)
+			bot.quit(message=f"{MSG}")
 			empty_userlist(obj)
 			obj.channel.setText("")
 			system_msg_display(obj,"Disconnected.")
@@ -1710,6 +1866,10 @@ def handle_commands(obj,text):
 			bot.join(CHANNEL,key=cKey)
 		return True
 
+	if len(tokens) >= 1 and tokens[0] == "/join":
+		error_msg_display(obj,"Usage: /join CHANNEL [PASSWORD]")
+		return True
+
 	if len(tokens) >= 3 and tokens[0] == "/msg":
 		tokens.pop(0)
 		TARGET = tokens.pop(0)
@@ -1726,6 +1886,10 @@ def handle_commands(obj,text):
 			private_msg_display(obj,bot.nickname,MSG)
 		return True
 
+	if len(tokens) >= 1 and tokens[0] == "/msg":
+		error_msg_display(obj,"Usage: /msg TARGET MESSAGE")
+		return True
+
 	if len(tokens) >= 2 and tokens[0] == "/say":
 		tokens.pop(0)
 		MSG = " ".join(tokens)
@@ -1733,6 +1897,10 @@ def handle_commands(obj,text):
 		private_msg_display(obj,bot.nickname,MSG)
 		if LOG_CHAT:
 			LOG.write(f"{timestamp()} {CHANNEL} {bot.nickname} {MSG}\n")
+		return True
+
+	if len(tokens) >= 1 and tokens[0] == "/say":
+		error_msg_display(obj,"Usage: /say MESSAGE")
 		return True
 
 	if len(tokens) >= 2 and tokens[0] == "/me":
@@ -1744,13 +1912,18 @@ def handle_commands(obj,text):
 			LOG.write(f"{timestamp()} ACTION->{CHANNEL} {bot.nickname} {MSG}\n")
 		return True
 
+	if len(tokens) >= 1 and tokens[0] == "/me":
+		error_msg_display(obj,"Usage: /me ACTION")
+		return True
+
 	if len(tokens) >= 2 and tokens[0] == "/topic":
-		if not CLIENT_IS_OPERATOR:
-			error_msg_display(obj,"Only operators can change the channel topic")
-			return True
 		tokens.pop(0)
 		MSG = " ".join(tokens)
 		bot.topic(CHANNEL,topic=f"{MSG}")
+		return True
+
+	if len(tokens) >= 1 and tokens[0] == "/topic":
+		error_msg_display(obj,"Usage: /topic NEW_TOPIC")
 		return True
 
 	if len(tokens) >= 3 and tokens[0] == "/notice":
@@ -1761,6 +1934,10 @@ def handle_commands(obj,text):
 		notice_msg_display(obj,bot.nickname,MSG)
 		if LOG_CHAT:
 			LOG.write(f"{timestamp()} NOTICE->{TARGET} {bot.nickname} {MSG}\n")
+		return True
+
+	if len(tokens) >= 1 and tokens[0] == "/notice":
+		error_msg_display(obj,"Usage: /notice TARGET MESSAGE")
 		return True
 
 	if len(tokens) >= 2 and tokens[0] == "/key":
@@ -1774,12 +1951,20 @@ def handle_commands(obj,text):
 		system_msg_display(obj,f"Channel key set to '{MSG}'")
 		return True
 
-	if len(tokens) >= 1 and tokens[0] == "/nokey":
+	if len(tokens) >= 1 and tokens[0] == "/key":
+		error_msg_display(obj,"Usage: /key PASSWORD")
+		return True
+
+	if len(tokens) >= 2 and tokens[0] == "/nokey":
 		if not CLIENT_IS_OPERATOR:
 			error_msg_display(obj,"Only operators can remove a channel key")
 			return True
-		bot.mode(CHANNEL,False,"k",user=f"{CHANNEL_KEY}")
+		bot.mode(CHANNEL,False,"k",user=f"{tokens[1]}")
 		system_msg_display(obj,"Channel key removed")
+		return True
+
+	if len(tokens) >= 1 and tokens[0] == "/nokey":
+		error_msg_display(obj,"Usage: /nokey PASSWORD")
 		return True
 
 	return False
@@ -1805,36 +1990,65 @@ def handle_user_input( obj, text ):
 	if LOG_CHAT:
 		LOG.write(f"{timestamp()} {CHANNEL} {bot.nickname} {text}\n")
 
+def pad_nick(nick,size):
+	if len(nick) >= size: return nick
+	x = size - len(nick)
+	y = '&nbsp;'*x
+	return f"{y}<b>{nick}</b>"
+
+def format_labeled_message(user,text,symbol,color):
+	global NICK_OR_INFO_TYPE_DISPLAY_SIZE
+	text = text.lstrip()
+	maximum_nick_size = NICK_OR_INFO_TYPE_DISPLAY_SIZE
+	if TIMESTAMP_CHAT:
+		return f"<table border=\"0\" cellspacing=\"0\" cellpadding=\"0\"><tr><td>{current_time()}</td><td>{symbol}<font color=\"{color}\">{pad_nick(user,maximum_nick_size)}</font>&nbsp;&nbsp;</td><td>&nbsp;{text}</td></tr></table>"
+	else:
+		return f"<table border=\"0\" cellspacing=\"0\" cellpadding=\"0\"><tr><td>{symbol}<font color=\"{color}\">{pad_nick(user,maximum_nick_size)}</font>&nbsp;&nbsp;</td><td>{text}</td></tr></table>"
+
+def format_message(symbol,color,text):
+	text = text.lstrip()
+	if TIMESTAMP_CHAT:
+		return f"<table border=\"0\" cellspacing=\"0\" cellpadding=\"0\"><tr><td>{current_time()}</td><td>{symbol}</td><td><font color=\"{color}\">&nbsp;{text}</font></td></tr></table>"
+	else:
+		return f"<table border=\"0\" cellspacing=\"0\" cellpadding=\"0\"><tr><td>{symbol}</td><td>&nbsp;<font color={color}>{text}</font></td></tr></table>"
+
 def private_msg_display( obj, user, text ):
 	if CREATE_LINKS:
 		text = format_links(text)
-	obj.chat_display.append(f"{PRIVATE_MESSAGE_SYMBOL}<b><font color={PRIVATE_MESSAGE_COLOR}><u>{user}</u></font>  </b>{text}\n")
+	d = format_labeled_message(user,text,PRIVATE_MESSAGE_SYMBOL,PRIVATE_MESSAGE_COLOR)
+	obj.chat_display.insertHtml(f"{d}")
 	see_last_line(obj)
 
 def chat_msg_display( obj, user, text ):
 	if CREATE_LINKS:
 		text = format_links(text)
-	obj.chat_display.append(f"{PUBLIC_MESSAGE_SYMBOL}<font color={PUBLIC_MESSAGE_COLOR}><b><u>{user}</u></b></font>  {text}\n")
+	d = format_labeled_message(user,text,PUBLIC_MESSAGE_SYMBOL,PUBLIC_MESSAGE_COLOR)
+	obj.chat_display.insertHtml(f"{d}")
 	see_last_line(obj)
 
 def system_msg_display( obj, text ):
-	obj.chat_display.append(f"<b>{SYSTEM_MESSAGE_SYMBOL}<i><font color={SYSTEM_MESSAGE_COLOR}> {text}</i></b></font>\n")
+	d = format_message(SYSTEM_MESSAGE_SYMBOL,SYSTEM_MESSAGE_COLOR,text)
+	obj.chat_display.insertHtml(f"{d}")
 	see_last_line(obj)
 
 def notice_msg_display( obj, user, text ):
-	obj.chat_display.append(f"<b>{NOTICE_MESSAGE_SYMBOL}<font color={NOTICE_MESSAGE_COLOR}><u>{user}</u></b></font>  {text}\n")
+	d = format_message(NOTICE_MESSAGE_SYMBOL,NOTICE_MESSAGE_COLOR,text)
+	obj.chat_display.insertHtml(f"{d}")
 	see_last_line(obj)
 
 def action_msg_display( obj, user, text ):
-	obj.chat_display.append(f"<b><font color={CTCP_ACTION_MESSAGE_COLOR}>{PUBLIC_MESSAGE_SYMBOL}<i><u>{user}</u> {text}</font></i></b>\n")
+	d = format_labeled_message(user,text,PUBLIC_MESSAGE_SYMBOL,CTCP_ACTION_MESSAGE_COLOR)
+	obj.chat_display.insertHtml(f"{d}")
 	see_last_line(obj)
 
-def server_info_msg_display( obj, text ):
-	obj.chat_display.append(f"{SERVER_INFORMATION_SYMBOL}<b><font color={SERVER_INFORMATION_MESSAGE_COLOR}></font>  </b>{text}\n")
+def server_info_msg_display( obj, data, text ):
+	d = format_labeled_message(data,text,SERVER_INFORMATION_SYMBOL,SERVER_INFORMATION_MESSAGE_COLOR)
+	obj.chat_display.insertHtml(f"{d}")
 	see_last_line(obj)
 
 def error_msg_display( obj, text ):
-	obj.chat_display.append(f"{ERROR_MESSAGE_SYMBOL}<b><font color={ERROR_MESSAGE_COLOR}>  {text}</font></b>\n")
+	d = format_message(ERROR_MESSAGE_SYMBOL,ERROR_MESSAGE_COLOR,text)
+	obj.chat_display.insertHtml(f"{d}")
 	see_last_line(obj)
 
 def write_to_display( obj, text ):
@@ -1844,6 +2058,10 @@ def write_to_display( obj, text ):
 def html_to_display( obj, text ):
 	obj.chat_display.insertHtml(text)
 	see_last_line(obj)
+
+def current_time():
+	x = time.strftime("%H:%M", time.gmtime())
+	return f"<small><b>{x}</b></small> "
 
 def see_last_line(obj):
 	obj.chat_display.moveCursor(QTextCursor.End)
@@ -1905,37 +2123,27 @@ def handle_clicked_link(obj,link):
 		return
 	error_msg_display(obj,f"Unrecognized link: \"{link}\"")
 
-# def help_link_menu():
-# 	return f"""<small>
-# <a href=\"basic\"><b><i>basic</i></b></a>,
-# <a href=\"channel\"><b><i>channel</i></b></a>,
-# <a href=\"advanced\"><b><i>advanced</i></b></a><br>
-# <a href=\"connection\"><b><i>connection</i></b></a>,
-# <a href=\"scripting\"><b><i>scripting</i></b></a>,  
-# <a href=\"gadget\"><b><i>gadget</i></b></a></small>
-# """
-
 def help_link_menu():
 	return f"""<center><small>
 <b>Command Categories</b>
 <table>
   <tr>
-    <td align=\"left\"><a href=\"basic\"><b><i>Basic</i></b></a></td>
-    <td>&nbsp;</td>
-    <td>&nbsp;</td>
-    <td align=\"center\"><a href=\"connection\"><b><i>Connection</i></b></a></td>
-    <td>&nbsp;</td>
-    <td>&nbsp;</td>
-    <td align=\"right\"><a href=\"advanced\"><b><i>Advanced</i></b></a></td>
+	<td align=\"left\"><a href=\"basic\"><b><i>Basic</i></b></a></td>
+	<td>&nbsp;</td>
+	<td>&nbsp;</td>
+	<td align=\"center\"><a href=\"connection\"><b><i>Connection</i></b></a></td>
+	<td>&nbsp;</td>
+	<td>&nbsp;</td>
+	<td align=\"right\"><a href=\"advanced\"><b><i>Advanced</i></b></a></td>
   </tr>
   <tr>
-    <td align=\"left\"><a href=\"channel\"><b><i>Channel</i></b></a></td>
-    <td>&nbsp;</td>
-    <td>&nbsp;</td>
-    <td align=\"center\"><a href=\"scripting\"><b><i>Scripting</i></b></a></td>
-    <td>&nbsp;</td>
-    <td>&nbsp;</td>
-    <td align=\"right\"><a href=\"gadget\"><b><i>Gadget</i></b></a></td>
+	<td align=\"left\"><a href=\"channel\"><b><i>Channel</i></b></a></td>
+	<td>&nbsp;</td>
+	<td>&nbsp;</td>
+	<td align=\"center\"><a href=\"scripting\"><b><i>Scripting</i></b></a></td>
+	<td>&nbsp;</td>
+	<td>&nbsp;</td>
+	<td align=\"right\"><a href=\"gadget\"><b><i>Gadget</i></b></a></td>
   </tr>
 </table>
 </small></center>
@@ -1951,6 +2159,15 @@ def startup_help(obj):
 	else:
 		html_to_display(obj,f"Use <b>/connect</b> <i>SERVER PORT</i> to connect to an IRC server<br>")
 	html_to_display(obj,f"Use <b>/help</b> for a list of commands and usage<br>")
+	# Holiday displays :-)
+	day = time.strftime("%d", time.gmtime())
+	month = time.strftime("%m", time.gmtime())
+	if day == "25" and month == "12":
+		html_to_display(obj,f"<h1><font color=\"red\">Merry</font> <font color=\"green\">Christmas!</font></h1>")
+	if day == "1" and month == "1":
+		html_to_display(obj,f"<h1><font color=\"blue\">Happy New Year!</font></h1>")
+	if day == "31" and month == "10":
+		html_to_display(obj,f"<h1><font color=\"orange\">Happy Halloween!</font></h1>")
 
 def help_commands(obj,subject):
 	if 'connect' in subject.lower():
@@ -1972,7 +2189,6 @@ def help_commands(obj,subject):
 		help_channel_commands(obj)
 		return
 	error_msg_display(obj,f"Unrecognized help CATEGORY: \"{subject}\"")
-	error_msg_display(obj,f"Valid catagories: {help_link_menu()}")
 
 def help_display_title(obj,txt):
 	html_to_display(obj,f"{SMALL_BR}<center>{HELP_TITLE_DISPLAY}<b>&nbsp;&nbsp;&nbsp;&nbsp;{txt}&nbsp;&nbsp;&nbsp;&nbsp;</b>{HELP_TITLE_DISPLAY_CLOSE}</center>{SMALL_BR}<small>{help_link_menu()}</small>")
@@ -1981,54 +2197,54 @@ def basic_commands_table():
 	return """
 <table>
   <tr>
-    <td><b>/nick</b> <i>NEWNICK</i></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Change nickname</td>
+	<td><b>/nick</b> <i>NEWNICK</i></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Change nickname</td>
   </tr>
   <tr>
-    <td><b>/msg</b> <i>TARGET MESSAGE</i></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Sends a private message</td>
+	<td><b>/msg</b> <i>TARGET MESSAGE</i></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Sends a private message</td>
   </tr>
   <tr>
-    <td><b>/say</b> <i>MESSAGE</i></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Send a message to the current channel</td>
+	<td><b>/say</b> <i>MESSAGE</i></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Send a message to the current channel</td>
   </tr>
   <tr>
-    <td><b>/notice</b> <i>TARGET MESSAGE</i></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Sends a notice to a user or channel</td>
+	<td><b>/notice</b> <i>TARGET MESSAGE</i></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Sends a notice to a user or channel</td>
   </tr>
   <tr>
-    <td><b>/me</b> <i>ACTION</i></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Sends a CTCP action message</td>
+	<td><b>/me</b> <i>ACTION</i></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Sends a CTCP action message</td>
   </tr>
   <tr>
-    <td><b>/join</b> <i>CHANNEL [KEY]</i></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Joins a new channel</td>
+	<td><b>/join</b> <i>CHANNEL [KEY]</i></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Joins a new channel</td>
   </tr>
   <tr>
-    <td><b>/away</b> <i>[MESSAGE]</i></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Sets status to away</td>
+	<td><b>/away</b> <i>[MESSAGE]</i></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Sets status to away</td>
   </tr>
   <tr>
-    <td><b>/back</b></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Sets status to back</td>
+	<td><b>/back</b></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Sets status to back</td>
   </tr>
   <tr>
-    <td><b>/quit</b> <i>[MESSAGE]</i></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Quits IRC</td>
+	<td><b>/quit</b> <i>[MESSAGE]</i></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Quits IRC</td>
   </tr>
   <tr>
-    <td><b>/exit</b></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Exits Quirc</td>
+	<td><b>/exit</b></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Exits Quirc</td>
   </tr>
 </table>
 """
@@ -2041,29 +2257,29 @@ def channel_commands_table():
 	return """
 <table>
   <tr>
-    <td><b>/invite</b> <i>NICKNAME CHANNEL</i></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Sends a channel invitation</td>
+	<td><b>/invite</b> <i>NICKNAME CHANNEL</i></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Sends a channel invitation</td>
   </tr>
   <tr>
-    <td><b>/kick</b> <i>NICKNAME [REASON]</i></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Kicks a user from the current channel</td>
+	<td><b>/kick</b> <i>NICKNAME [REASON]</i></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Kicks a user from the current channel</td>
   </tr>
   <tr>
-    <td><b>/topic</b> <i>TEXT</i></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Sets the current channel's topic</td>
+	<td><b>/topic</b> <i>TEXT</i></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Sets the current channel's topic</td>
   </tr>
   <tr>
-    <td><b>/key</b> <i>TEXT</i></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Sets the current channel's key</td>
+	<td><b>/key</b> <i>TEXT</i></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Sets the current channel's key</td>
   </tr>
   <tr>
-    <td><b>/nokey</b></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Unsets the current channel's key</td>
+	<td><b>/nokey</b></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Unsets the current channel's key</td>
   </tr>
 </table>
 """
@@ -2076,24 +2292,24 @@ def connection_ssl_commands_table():
 	return """
 <table>
   <tr>
-    <td><b>/connect</b> <i>SERVER PORT</i></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Connect to an IRC server</td>
+	<td><b>/connect</b> <i>SERVER PORT</i></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Connect to an IRC server</td>
   </tr>
   <tr>
-    <td><b>/ssl</b> <i>SERVER PORT</i></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Connect to an IRC server via SSL</td>
+	<td><b>/ssl</b> <i>SERVER PORT</i></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Connect to an IRC server via SSL</td>
   </tr>
   <tr>
-    <td><b>/quit</b> <i>[MESSAGE]</i></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Quits IRC</td>
+	<td><b>/quit</b> <i>[MESSAGE]</i></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Quits IRC</td>
   </tr>
   <tr>
-    <td><b>/exit</b></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Exits Quirc</td>
+	<td><b>/exit</b></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Exits Quirc</td>
   </tr>
 </table>
 """
@@ -2102,19 +2318,19 @@ def connection_commands_table():
 	return """
 <table>
   <tr>
-    <td><b>/connect</b> <i>SERVER PORT</i></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Connect to an IRC server</td>
+	<td><b>/connect</b> <i>SERVER PORT</i></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Connect to an IRC server</td>
   </tr>
   <tr>
-    <td><b>/quit</b> <i>[MESSAGE]</i></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Quits IRC</td>
+	<td><b>/quit</b> <i>[MESSAGE]</i></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Quits IRC</td>
   </tr>
   <tr>
-    <td><b>/exit</b></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Exits Quirc</td>
+	<td><b>/exit</b></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Exits Quirc</td>
   </tr>
 </table>
 """
@@ -2131,14 +2347,14 @@ def gadget_commands_table():
 	return """
 <table>
   <tr>
-    <td><b>/move</b>  <i>X Y</i></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Moves the IRC gadget</td>
+	<td><b>/move</b>  <i>X Y</i></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Moves the IRC gadget</td>
   </tr>
   <tr>
-    <td><b>/size</b>  <i>WIDTH HEIGHT</i></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Resizes the IRC gadget</td>
+	<td><b>/size</b>  <i>WIDTH HEIGHT</i></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Resizes the IRC gadget</td>
   </tr>
 </table>
 """
@@ -2151,44 +2367,44 @@ def scripting_commands_table():
 	return """
 <table>
   <tr>
-    <td><b>/script</b> <i>FILENAME</i></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Loads a list of Quirc commands from a file and executes them</td>
+	<td><b>/script</b> <i>FILENAME</i></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Loads a list of Quirc commands from a file and executes them</td>
   </tr>
   <tr>
-    <td><b>/edit</b> <i>FILENAME</i></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Opens a text file for editing</td>
+	<td><b>/edit</b> <i>FILENAME</i></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Opens a text file for editing</td>
   </tr>
   <tr>
-    <td><b>/delay</b> <i>TIME COMMAND</i></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Delays execution of a command by TIME seconds</td>
+	<td><b>/delay</b> <i>TIME COMMAND</i></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Delays execution of a command by TIME seconds</td>
   </tr>
   <tr>
-    <td><b>/online</b> <i>COMMAND</i></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Delays execution of a command until the client is connected to a server</td>
+	<td><b>/online</b> <i>COMMAND</i></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Delays execution of a command until the client is connected to a server</td>
   </tr>
   <tr>
-    <td><b>/var</b> <i>NAME VALUE</i></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Creates a script variable</td>
+	<td><b>/var</b> <i>NAME VALUE</i></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Creates a script variable</td>
   </tr>
   <tr>
-    <td><b>/print</b> <i>[TEXT]</i></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Prints text on the chat display</td>
+	<td><b>/print</b> <i>[TEXT]</i></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Prints text on the chat display</td>
   </tr>
   <tr>
-    <td><b>/raw</b> <i>[MESSAGE]</i></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Sends an unaltered message to the server</td>
+	<td><b>/raw</b> <i>[MESSAGE]</i></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Sends an unaltered message to the server</td>
   </tr>
   <tr>
-    <td><i>COMMAND</i> <b>&&</b> <i>COMMAND</i></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Execute multiple commands at a time</td>
+	<td><i>COMMAND</i> <b>&&</b> <i>COMMAND</i></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Execute multiple commands at a time</td>
   </tr>
 </table>
 """
@@ -2203,79 +2419,79 @@ def advanced_commands_table():
 	return """
 <table>
   <tr>
-    <td><b>/mode</b> <i>TARGET MODE ARGUMENTS</i></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Sets a channel or user mode</td>
+	<td><b>/mode</b> <i>TARGET MODE ARGUMENTS</i></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Sets a channel or user mode</td>
   </tr>
   <tr>
-    <td><b>/oper</b> <i>USERNAME PASSWORD</i></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Logs into an operator account</td>
+	<td><b>/oper</b> <i>USERNAME PASSWORD</i></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Logs into an operator account</td>
   </tr>
   <tr>
-    <td><b>/list</b> <i>[CHANNEL] [...]</i></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Requests channel information from the server</td>
+	<td><b>/list</b> <i>[CHANNEL] [...]</i></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Requests channel information from the server</td>
   </tr>
   <tr>
-    <td><b>/whois</b> <i>NICKNAME</i></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Requests whois data from the server</td>
+	<td><b>/whois</b> <i>NICKNAME</i></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Requests whois data from the server</td>
   </tr>
   <tr>
-    <td><b>/whowas</b> <i>NICKNAME</i></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Requests whowas data from the server</td>
+	<td><b>/whowas</b> <i>NICKNAME</i></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Requests whowas data from the server</td>
   </tr>
   <tr>
-    <td><b>/who</b> <i>SEARCH</i></i></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Search for users</td>
+	<td><b>/who</b> <i>SEARCH</i></i></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Search for users</td>
   </tr>
   <tr>
-    <td><b>/version</b></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Requests software version from the server</td>
+	<td><b>/version</b></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Requests software version from the server</td>
   </tr>
   <tr>
-    <td><b>/motd</b></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Requests MOTD from the server</td>
+	<td><b>/motd</b></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Requests MOTD from the server</td>
   </tr>
   <tr>
-    <td><b>/time</b></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Requests the server date/time</td>
+	<td><b>/time</b></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Requests the server date/time</td>
   </tr>
   <tr>
-    <td><b>/info</b></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Requests the server info text</td>
+	<td><b>/info</b></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Requests the server info text</td>
   </tr>
   <tr>
-    <td><b>/lusers</b> <i>[MASK] [TARGET]</i></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Requests LUSER information from the server</td>
+	<td><b>/lusers</b> <i>[MASK] [TARGET]</i></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Requests LUSER information from the server</td>
   </tr>
   <tr>
-    <td><b>/uptime</b></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Displays application uptime</td>
+	<td><b>/uptime</b></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Displays application uptime</td>
   </tr>
   <tr>
-    <td><b>/stats</b> <i>servers|commands|ops|uptime</i></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Requests stats from the server</td>
+	<td><b>/stats</b> <i>servers|commands|ops|uptime</i></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Requests stats from the server</td>
   </tr>
   <tr>
-    <td><b>/trace</b> <i>[TARGET]</i></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Requests route information from the network</td>
+	<td><b>/trace</b> <i>[TARGET]</i></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Requests route information from the network</td>
   </tr>
   <tr>
-    <td><b>/admin</b> <i>[TARGET]</i></td>
-    <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
-    <td>Requests server administration information</td>
+	<td><b>/admin</b> <i>[TARGET]</i></td>
+	<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+	<td>Requests server administration information</td>
   </tr>
 </table>
 """
