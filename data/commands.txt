@@ -1,0 +1,17 @@
+/ join [CHANNEL] [KEY]
+Joins a channel. If the command is issued with no arguments, a dialog window will open ask for the channel (and channel key, if needed) to join. The channel key is only needed if the channel has the +k mode enabled.
+
+/part CHANNEL
+Leaves a channel.
+
+/nick NEW_NICKNAME
+Changes the user's nickname. All nicknames on a server are unique; if the chosen nickname is already taken, a random number is attached to the desired nickname, and that is set as the nickname.
+
+/me MESSAGE
+Sends a CTCP action message. These appear as action descriptions; for example, if your username was "funnygal", and you used the command "/me eats an apple", the message would appear to other IRC users as "funnygal eats an apple".
+
+/msg TARGET MESSAGE
+Sends a message to a user or channel.
+
+/notice TARGET MESSAGE
+Sends a notice to a user or channel.

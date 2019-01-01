@@ -1,3 +1,7 @@
+Version 0.02661
+	* Complete re-write
+	* All new GUI
+
 Version 0.01661
 	* HTML is stripped from all incoming chat/notices by default
 	* Added --html option to stop stripping HTML from incoming chat/notices
