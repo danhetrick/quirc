@@ -1,3 +1,13 @@
+Version 0.02662
+	* Display font can now be changed by the user
+	* User settings are loaded (and used) correctly
+	* Colors can now be changed and saved
+	* IRC server passwords can now be set (and used)
+	* Gear icon removed
+	* New connect and disconnect icons
+	* New font icon
+	* New color icon
+
 Version 0.02661
 	* Complete re-write
 	* All new GUI

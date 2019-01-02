@@ -55,7 +55,7 @@ from PyQt5.QtCore import *
 from PyQt5 import QtCore
 
 APPLICATION = "Quirc"
-VERSION = "0.02661"
+VERSION = "0.02662"
 DESCRIPTION = "A Python3/Qt5 IRC client"
 
 # ============
@@ -73,11 +73,13 @@ SERVER_PASSWORD = ''
 DISPLAY_FONT = "Courier New"
 DISPLAY_FONT_SIZE = 10
 
-PUBLIC_MESSAGE_COLOR = "darkblue"
-PRIVATE_MESSAGE_COLOR = "red"
-SYSTEM_MESSAGE_COLOR = "orange"
-ACTION_MESSAGE_COLOR = "green"
-NOTICE_MESSAGE_COLOR = "purple"
+PUBLIC_MESSAGE_COLOR = "#00008B"
+PRIVATE_MESSAGE_COLOR = "#FF0000"
+SYSTEM_MESSAGE_COLOR = "#FFA500"
+ACTION_MESSAGE_COLOR = "#008000"
+NOTICE_MESSAGE_COLOR = "#800080"
+
+BACKGROUND_COLOR = "#FFFFFF"
 
 MAXIMUM_NICK_DISPLAY_SIZE = 10
 
@@ -123,6 +125,7 @@ DATA_DIRECTORY = os.path.join(INSTALL_DIRECTORY, "data")
 
 USER_INFORMATION_FILE = os.path.join(INSTALL_DIRECTORY, "user.json")
 SERVER_INFORMATION_FILE = os.path.join(INSTALL_DIRECTORY, "server.json")
+COLOR_INFORMATION_FILE = os.path.join(INSTALL_DIRECTORY, "colors.json")
 
 SERVER_LIST_FILE = os.path.join(DATA_DIRECTORY, "servers.txt")
 COMMAND_HELP_FILE = os.path.join(DATA_DIRECTORY, "commands.txt")
@@ -132,10 +135,174 @@ GEAR_ICON_FILE = os.path.join(DATA_DIRECTORY, "gear.png")
 INFO_ICON_FILE = os.path.join(DATA_DIRECTORY, "info.png")
 CONNECT_ICON_FILE = os.path.join(DATA_DIRECTORY, "connect.png")
 USER_ICON_FILE = os.path.join(DATA_DIRECTORY, "user.png")
+COLOR_ICON_FILE = os.path.join(DATA_DIRECTORY, "colors.png")
+FONT_ICON_FILE = os.path.join(DATA_DIRECTORY, "font.png")
+DISCONNECT_ICON_FILE = os.path.join(DATA_DIRECTORY, "disconnect.png")
+
+
+QUIRC_FONT_BOLD = QFont(DISPLAY_FONT, DISPLAY_FONT_SIZE, QFont.Bold)
+QUIRC_FONT = QFont(DISPLAY_FONT, DISPLAY_FONT_SIZE)
+
 
 # ===========
 # | CLASSES |
 # ===========
+
+class SetColorsDialog(QDialog):
+	global GUI
+	global CLIENT
+
+	def selectChatColor(self):
+		global PUBLIC_MESSAGE_COLOR
+		color = QColorDialog.getColor(initial=QColor(PUBLIC_MESSAGE_COLOR))
+		if color.isValid():
+			PUBLIC_MESSAGE_COLOR = color.name()
+			self.cd.setText(f"<font color=\"{PUBLIC_MESSAGE_COLOR}\">Chat Text</font>")
+
+	def selectPrivateColor(self):
+		global PRIVATE_MESSAGE_COLOR
+		color = QColorDialog.getColor(initial=QColor(PRIVATE_MESSAGE_COLOR))
+		if color.isValid():
+			PRIVATE_MESSAGE_COLOR = color.name()
+			self.pd.setText(f"<font color=\"{PRIVATE_MESSAGE_COLOR}\">Private Message Text</font>")
+
+	def selectSystemColor(self):
+		global SYSTEM_MESSAGE_COLOR
+		color = QColorDialog.getColor(initial=QColor(SYSTEM_MESSAGE_COLOR))
+		if color.isValid():
+			SYSTEM_MESSAGE_COLOR = color.name()
+			self.sd.setText(f"<font color=\"{SYSTEM_MESSAGE_COLOR}\">System Text</font>")
+
+	def selectActionColor(self):
+		global ACTION_MESSAGE_COLOR
+		color = QColorDialog.getColor(initial=QColor(ACTION_MESSAGE_COLOR))
+		if color.isValid():
+			ACTION_MESSAGE_COLOR = color.name()
+			self.ad.setText(f"<font color=\"{ACTION_MESSAGE_COLOR}\">Action Text</font>")
+
+	def selectNoticeColor(self):
+		global NOTICE_MESSAGE_COLOR
+		color = QColorDialog.getColor(initial=QColor(NOTICE_MESSAGE_COLOR))
+		if color.isValid():
+			NOTICE_MESSAGE_COLOR = color.name()
+			self.nd.setText(f"<font color=\"{NOTICE_MESSAGE_COLOR}\">Notice Text</font>")
+
+	def selectbgColor(self):
+		global BACKGROUND_COLOR
+		color = QColorDialog.getColor(initial=QColor(BACKGROUND_COLOR))
+		if color.isValid():
+			BACKGROUND_COLOR = color.name()
+			self.bgd.setText(f"<font color=\"{BACKGROUND_COLOR}\">Background Color</font>")
+			GUI.chatDisplay.setStyleSheet(f"background-color: \"{BACKGROUND_COLOR}\";")
+
+	def __init__(self,parent=None):
+		super(SetColorsDialog,self).__init__(parent)
+
+		QUIRC_FONT_BOLD = QFont(DISPLAY_FONT, DISPLAY_FONT_SIZE, QFont.Bold)
+		self.setWindowTitle("Set Colors")
+		self.setWindowIcon(QIcon(COLOR_ICON_FILE))
+
+		noticeLayout = QHBoxLayout()
+		self.nd = QLabel("Notice Text")
+		self.nd.setFont(QUIRC_FONT_BOLD)
+		self.noticeSet = QPushButton("Select Color")
+		self.noticeSet.setFont(QUIRC_FONT)
+		self.noticeSet.clicked.connect(self.selectNoticeColor)
+		noticeLayout.addWidget(self.nd)
+		noticeLayout.addWidget(self.noticeSet)
+
+		self.nd.setText(f"<font color=\"{NOTICE_MESSAGE_COLOR}\">Notice Messages&nbsp;</font>")
+
+		actionLayout = QHBoxLayout()
+		self.ad = QLabel("Action Text")
+		self.ad.setFont(QUIRC_FONT_BOLD)
+		self.actionSet = QPushButton("Select Color")
+		self.actionSet.setFont(QUIRC_FONT)
+		self.actionSet.clicked.connect(self.selectActionColor)
+		actionLayout.addWidget(self.ad)
+		actionLayout.addWidget(self.actionSet)
+
+		self.ad.setText(f"<font color=\"{ACTION_MESSAGE_COLOR}\">Action Messages&nbsp;</font>")
+
+		chatLayout = QHBoxLayout()
+		self.cd = QLabel("Chat Text")
+		self.cd.setFont(QUIRC_FONT_BOLD)
+		self.chatSet = QPushButton("Select Color")
+		self.chatSet.setFont(QUIRC_FONT)
+		self.chatSet.clicked.connect(self.selectChatColor)
+		chatLayout.addWidget(self.cd)
+		chatLayout.addWidget(self.chatSet)
+
+		self.cd.setText(f"<font color=\"{PUBLIC_MESSAGE_COLOR}\">Public Messages&nbsp;</font>")
+
+		privateLayout = QHBoxLayout()
+		self.pd = QLabel("Private Messages")
+		self.pd.setFont(QUIRC_FONT_BOLD)
+		self.privateSet = QPushButton("Select Color")
+		self.privateSet.setFont(QUIRC_FONT)
+		self.privateSet.clicked.connect(self.selectPrivateColor)
+		privateLayout.addWidget(self.pd)
+		privateLayout.addWidget(self.privateSet)
+
+		self.pd.setText(f"<font color=\"{PRIVATE_MESSAGE_COLOR}\">Private Messages</font>")
+
+		systemLayout = QHBoxLayout()
+		self.sd = QLabel("System Text")
+		self.sd.setFont(QUIRC_FONT_BOLD)
+		self.systemSet = QPushButton("Select Color")
+		self.systemSet.setFont(QUIRC_FONT)
+		self.systemSet.clicked.connect(self.selectSystemColor)
+		systemLayout.addWidget(self.sd)
+		systemLayout.addWidget(self.systemSet)
+
+		self.sd.setText(f"<font color=\"{SYSTEM_MESSAGE_COLOR}\">System Text&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font>")
+
+		bgLayout = QHBoxLayout()
+		self.bgd = QLabel("Background")
+		self.bgd.setFont(QUIRC_FONT_BOLD)
+		self.bgSet = QPushButton("Select Color")
+		self.bgSet.setFont(QUIRC_FONT)
+		self.bgSet.clicked.connect(self.selectbgColor)
+		bgLayout.addWidget(self.bgd)
+		bgLayout.addWidget(self.bgSet)
+
+		self.bgd.setText(f"<font color=\"{BACKGROUND_COLOR}\">Background Color</font>")
+
+
+		self.saveColor = QPushButton("Save")
+		self.saveColor.setFont(QUIRC_FONT)
+		self.saveColor.clicked.connect(self.saveColorToFile)
+
+		self.cancelColor = QPushButton("Cancel")
+		self.cancelColor.setFont(QUIRC_FONT)
+		self.cancelColor.clicked.connect(self.close)
+
+		layout = QVBoxLayout()
+		layout.addLayout(chatLayout)
+		layout.addLayout(privateLayout)
+		layout.addLayout(actionLayout)
+		layout.addLayout(noticeLayout)
+		layout.addLayout(systemLayout)
+		layout.addLayout(bgLayout)
+		layout.addWidget(self.saveColor)
+		layout.addWidget(self.cancelColor)
+
+		self.setLayout(layout)
+
+	def saveColorToFile(self):
+		cf = {
+			"system": SYSTEM_MESSAGE_COLOR,
+			"public": PUBLIC_MESSAGE_COLOR,
+			"private": PRIVATE_MESSAGE_COLOR,
+			"notice": NOTICE_MESSAGE_COLOR,
+			"action": ACTION_MESSAGE_COLOR,
+			"background": BACKGROUND_COLOR
+		}
+		with open(COLOR_INFORMATION_FILE, "w") as write_data:
+			json.dump(cf, write_data)
+
+		GUI.activateWindow()
+		self.close()
 
 class ServerConnectDialog(QDialog):
 	global GUI
@@ -210,33 +377,40 @@ class ServerConnectDialog(QDialog):
 
 	def __init__(self,parent=None):
 		super(ServerConnectDialog,self).__init__(parent)
-		fontBold = QFont(DISPLAY_FONT, DISPLAY_FONT_SIZE, QFont.Bold)
+		#QUIRC_FONT_BOLD = QFont(DISPLAY_FONT, DISPLAY_FONT_SIZE, QFont.Bold)
 		self.setWindowTitle("Connect to IRC")
 		self.StoredServer = ''
 		self.DIALOG_CONNECT_VIA_SSL = False
 
+		self.setWindowTitle("Connect")
+		self.setWindowIcon(QIcon(CONNECT_ICON_FILE))
+
 		# User Settings Box
 
 		userBox = QGroupBox("User Settings")
+		userBox.setFont(QUIRC_FONT)
 
 		nickLayout = QHBoxLayout()
 		self.nd = QLabel("Nickname")
-		self.nd.setFont(fontBold)
+		self.nd.setFont(QUIRC_FONT_BOLD)
 		self.nick = QLineEdit(f"{NICKNAME}")
+		self.nick.setFont(QUIRC_FONT)
 		nickLayout.addWidget(self.nd)
 		nickLayout.addWidget(self.nick)
 
 		realLayout = QHBoxLayout()
 		self.rd = QLabel("IRC Name")
-		self.rd.setFont(fontBold)
+		self.rd.setFont(QUIRC_FONT_BOLD)
 		self.realname = QLineEdit(f"{REALNAME}")
+		self.realname.setFont(QUIRC_FONT)
 		realLayout.addWidget(self.rd)
 		realLayout.addWidget(self.realname)
 
 		userLayout = QHBoxLayout()
 		self.ud = QLabel("Username")
-		self.ud.setFont(fontBold)
+		self.ud.setFont(QUIRC_FONT_BOLD)
 		self.username = QLineEdit(f"{USERNAME}")
+		self.username.setFont(QUIRC_FONT)
 		userLayout.addWidget(self.ud)
 		userLayout.addWidget(self.username)
 
@@ -250,18 +424,21 @@ class ServerConnectDialog(QDialog):
 		# Channel Box
 
 		channelBox = QGroupBox("Join Channel on Connect")
+		channelBox.setFont(QUIRC_FONT)
 
 		chanLayout = QHBoxLayout()
 		self.cd = QLabel("Channel Name")
-		self.cd.setFont(fontBold)
+		self.cd.setFont(QUIRC_FONT_BOLD)
 		self.chan = QLineEdit()
+		self.chan.setFont(QUIRC_FONT)
 		chanLayout.addWidget(self.cd)
 		chanLayout.addWidget(self.chan)
 
 		keyLayout = QHBoxLayout()
 		self.kd = QLabel("Channel Key ")
-		self.kd.setFont(fontBold)
+		self.kd.setFont(QUIRC_FONT_BOLD)
 		self.key = QLineEdit()
+		self.key.setFont(QUIRC_FONT)
 		keyLayout.addWidget(self.kd)
 		keyLayout.addWidget(self.key)
 
@@ -273,11 +450,14 @@ class ServerConnectDialog(QDialog):
 
 		# Select Server Type
 
-		selectBox = QGroupBox("Connect")
+		selectBox = QGroupBox("Connect to Server")
+		selectBox.setFont(QUIRC_FONT)
 
 		tselectLayout = QHBoxLayout()
-		self.usePre = QRadioButton("To stored server")
-		self.useCustom = QRadioButton("To custom server")
+		self.usePre = QRadioButton("Pre-set server")
+		self.usePre.setFont(QUIRC_FONT)
+		self.useCustom = QRadioButton("Enter server manually")
+		self.useCustom.setFont(QUIRC_FONT)
 		tselectLayout.addWidget(self.usePre)
 		tselectLayout.addWidget(self.useCustom)
 		self.usePre.setChecked(True)
@@ -288,12 +468,14 @@ class ServerConnectDialog(QDialog):
 
 		# Stored Server Box
 
-		storedBox = QGroupBox("Stored Server")
+		storedBox = QGroupBox("Pre-set Servers")
+		storedBox.setFont(QUIRC_FONT)
 
 		servLayout = QHBoxLayout()
 		self.sd = QLabel("Server")
-		self.sd.setFont(fontBold)
+		self.sd.setFont(QUIRC_FONT_BOLD)
 		self.servers = QComboBox(self)
+		self.servers.setFont(QUIRC_FONT)
 		self.servers.activated.connect(self.setServer)
 		script = open(SERVER_LIST_FILE,"r")
 		script = sorted(script, key=str.lower)
@@ -306,8 +488,9 @@ class ServerConnectDialog(QDialog):
 
 		sportLayout = QHBoxLayout()
 		self.spd = QLabel("Port  ")
-		self.spd.setFont(fontBold)
+		self.spd.setFont(QUIRC_FONT_BOLD)
 		self.sport = QLineEdit("6667")
+		self.sport.setFont(QUIRC_FONT)
 		sportLayout.addWidget(self.spd)
 		sportLayout.addWidget(self.sport)
 
@@ -319,31 +502,37 @@ class ServerConnectDialog(QDialog):
 
 		# Custom Server Box
 
-		customBox = QGroupBox("Custom Server")
+		customBox = QGroupBox("Manual Server Connection")
+		customBox.setFont(QUIRC_FONT)
 
 		cservLayout = QHBoxLayout()
 		self.cpd = QLabel("Server  ")
-		self.cpd.setFont(fontBold)
+		self.cpd.setFont(QUIRC_FONT_BOLD)
 		self.cserv = QLineEdit()
+		self.cserv.setFont(QUIRC_FONT)
 		cservLayout.addWidget(self.cpd)
 		cservLayout.addWidget(self.cserv)
 
 		cpLayput = QHBoxLayout()
 		self.csd = QLabel("Port    ")
-		self.csd.setFont(fontBold)
+		self.csd.setFont(QUIRC_FONT_BOLD)
 		self.cport = QLineEdit()
+		self.cport.setFont(QUIRC_FONT)
 		cpLayput.addWidget(self.csd)
 		cpLayput.addWidget(self.cport)
 
 		pcpLayput = QHBoxLayout()
 		self.pcsd = QLabel("Password")
-		self.pcsd.setFont(fontBold)
+		self.pcsd.setFont(QUIRC_FONT_BOLD)
 		self.password = QLineEdit()
+		self.password.setFont(QUIRC_FONT)
 		pcpLayput.addWidget(self.pcsd)
 		pcpLayput.addWidget(self.password)
 
-		if IS_SSL_AVAILABLE: self.ssl = QCheckBox("Connect via SSL",self)
-		if IS_SSL_AVAILABLE: self.ssl.stateChanged.connect(self.clickSSL)
+		if IS_SSL_AVAILABLE:
+			self.ssl = QCheckBox("Connect via SSL",self)
+			self.ssl.setFont(QUIRC_FONT)
+			self.ssl.stateChanged.connect(self.clickSSL)
 
 		cslayout = QVBoxLayout()
 		cslayout.addLayout(cservLayout)
@@ -373,7 +562,9 @@ class ServerConnectDialog(QDialog):
 		buttonLayout = QHBoxLayout()
 
 		self.connect = QPushButton("Connect")
+		self.connect.setFont(QUIRC_FONT)
 		self.cancel = QPushButton("Cancel")
+		self.cancel.setFont(QUIRC_FONT)
 
 		buttonLayout.addWidget(self.connect)
 		buttonLayout.addWidget(self.cancel)
@@ -404,25 +595,30 @@ class JoinChannelDialog(QDialog):
 	global CLIENT
 	def __init__(self,parent=None):
 		super(JoinChannelDialog,self).__init__(parent)
-		fontBold = QFont(DISPLAY_FONT, DISPLAY_FONT_SIZE, QFont.Bold)
+		#QUIRC_FONT_BOLD = QFont(DISPLAY_FONT, DISPLAY_FONT_SIZE, QFont.Bold)
 		self.setWindowTitle("Join Channel")
+		self.setWindowIcon(QIcon(IRC_ICON_FILE))
 
 		chanLayout = QHBoxLayout()
 		self.cd = QLabel("Channel Name")
-		self.cd.setFont(fontBold)
+		self.cd.setFont(QUIRC_FONT_BOLD)
 		self.chan = QLineEdit()
+		self.chan.setFont(QUIRC_FONT)
 		chanLayout.addWidget(self.cd)
 		chanLayout.addWidget(self.chan)
 
 		keyLayout = QHBoxLayout()
 		self.kd = QLabel("Channel Key ")
-		self.kd.setFont(fontBold)
+		self.kd.setFont(QUIRC_FONT_BOLD)
 		self.key = QLineEdit()
+		self.key.setFont(QUIRC_FONT)
 		keyLayout.addWidget(self.kd)
 		keyLayout.addWidget(self.key)
 
 		self.go = QPushButton("Join")
+		self.go.setFont(QUIRC_FONT)
 		self.canc = QPushButton("Cancel")
+		self.canc.setFont(QUIRC_FONT)
 		self.go.clicked.connect(self.use)
 		self.canc.clicked.connect(self.close)
 
@@ -448,36 +644,43 @@ class SetUserInfo(QDialog):
 	global GUI
 	def __init__(self,parent=None):
 		super(SetUserInfo,self).__init__(parent)
-		fontBold = QFont(DISPLAY_FONT, DISPLAY_FONT_SIZE, QFont.Bold)
+		#QUIRC_FONT_BOLD = QFont(DISPLAY_FONT, DISPLAY_FONT_SIZE, QFont.Bold)
 		global NICKNAME
 		global REALNAME
 		global USERNAME
 		self.setWindowTitle("User Settings")
+		self.setWindowIcon(QIcon(USER_ICON_FILE))
 
 		nickLayout = QHBoxLayout()
 		self.nd = QLabel("Nickname")
-		self.nd.setFont(fontBold)
+		self.nd.setFont(QUIRC_FONT_BOLD)
 		self.nick = QLineEdit(f"{NICKNAME}")
+		self.nick.setFont(QUIRC_FONT)
 		nickLayout.addWidget(self.nd)
 		nickLayout.addWidget(self.nick)
 
 		realLayout = QHBoxLayout()
 		self.rd = QLabel("IRC Name")
-		self.rd.setFont(fontBold)
+		self.rd.setFont(QUIRC_FONT_BOLD)
 		self.realname = QLineEdit(f"{REALNAME}")
+		self.realname.setFont(QUIRC_FONT)
 		realLayout.addWidget(self.rd)
 		realLayout.addWidget(self.realname)
 
 		userLayout = QHBoxLayout()
 		self.ud = QLabel("Username")
-		self.ud.setFont(fontBold)
+		self.ud.setFont(QUIRC_FONT_BOLD)
 		self.username = QLineEdit(f"{USERNAME}")
+		self.username.setFont(QUIRC_FONT)
 		userLayout.addWidget(self.ud)
 		userLayout.addWidget(self.username)
 
 		self.go = QPushButton("Use")
+		self.go.setFont(QUIRC_FONT)
 		self.sav = QPushButton("Use and Save as Default")
+		self.sav.setFont(QUIRC_FONT)
 		self.canc = QPushButton("Cancel")
+		self.canc.setFont(QUIRC_FONT)
 		self.go.clicked.connect(self.use)
 		self.sav.clicked.connect(self.save)
 		self.canc.clicked.connect(self.close)
@@ -676,6 +879,27 @@ class qpIRC_GUI(QMainWindow):
 		with open(SERVER_INFORMATION_FILE, "w") as write_data:
 			json.dump(data, write_data)
 
+	def menuColor(self):
+		x = SetColorsDialog(parent=self)
+		x.show()
+
+	def menuFont(self):
+		global QUIRC_FONT_BOLD
+		global QUIRC_FONT
+
+		f, ok = QFontDialog(parent=self).getFont(QUIRC_FONT)
+		if ok:
+			QUIRC_FONT = f
+			QUIRC_FONT_BOLD = f
+			QUIRC_FONT_BOLD.setBold(True)
+
+		self.statusDisplay.setFont(QUIRC_FONT_BOLD)
+		self.chatDisplay.setFont(QUIRC_FONT)
+		self.userList.setFont(QUIRC_FONT_BOLD)
+		self.channelList.setFont(QUIRC_FONT_BOLD)
+		self.ircInput.setFont(QUIRC_FONT)
+
+
 	def createUI(self):
 
 		menubar = self.menuBar()
@@ -686,7 +910,7 @@ class qpIRC_GUI(QMainWindow):
 		self.connectAct.triggered.connect(self.menuConnect)
 		serverMenu.addAction(self.connectAct)
 
-		self.disconnectAct = QAction(QIcon(GEAR_ICON_FILE),"Disconnect from server",self)
+		self.disconnectAct = QAction(QIcon(DISCONNECT_ICON_FILE),"Disconnect from server",self)
 		self.disconnectAct.triggered.connect(self.menuDisconnect)
 		self.disconnectAct.setEnabled(False)
 		serverMenu.addAction(self.disconnectAct)
@@ -715,7 +939,16 @@ class qpIRC_GUI(QMainWindow):
 		userAct.triggered.connect(self.menuUser)
 		settingsMenu.addAction(userAct)
 
-		self.autoAct = QAction(QIcon(GEAR_ICON_FILE),"Auto-connect to current server",self)
+		colorAct = QAction(QIcon(COLOR_ICON_FILE),"Colors",self)
+		colorAct.triggered.connect(self.menuColor)
+		settingsMenu.addAction(colorAct)
+
+
+		fontAct = QAction(QIcon(FONT_ICON_FILE),"Font",self)
+		fontAct.triggered.connect(self.menuFont)
+		settingsMenu.addAction(fontAct)
+
+		self.autoAct = QAction(QIcon(CONNECT_ICON_FILE),"Auto-connect to current server",self)
 		self.autoAct.triggered.connect(self.menuAuto)
 		self.autoAct.setEnabled(False)
 		settingsMenu.addAction(self.autoAct)
@@ -731,21 +964,17 @@ class qpIRC_GUI(QMainWindow):
 
 		self.setWindowIcon(QIcon(IRC_ICON_FILE))
 
-		font = QFont(DISPLAY_FONT, DISPLAY_FONT_SIZE)
-		fontBold = QFont(DISPLAY_FONT, DISPLAY_FONT_SIZE, QFont.Bold)
-		fontButton = QFont(DISPLAY_FONT, 8, QFont.Bold)
-
 		# Status display
 		self.statusDisplay = QLabel(self)
 		self.statusDisplay.setText("")
 		self.statusDisplay.move(10,0)
-		self.statusDisplay.setFont(fontBold)
+		self.statusDisplay.setFont(QUIRC_FONT_BOLD)
 		self.statusDisplay.setGeometry(QtCore.QRect(self.statusDisplay.x(), self.statusDisplay.y(), 615, 30))
 
 		# Chat and input display
 		self.chatDisplay = QTextBrowser(self)
 		self.chatDisplay.setGeometry(QtCore.QRect(10, 10, 450, 425))
-		self.chatDisplay.setFont(font)
+		self.chatDisplay.setFont(QUIRC_FONT)
 		self.chatDisplay.setObjectName("chatDisplay")
 
 		self.chatDisplay.anchorClicked.connect(self.linkClicked)
@@ -753,7 +982,7 @@ class qpIRC_GUI(QMainWindow):
 		# Channel user / Server channel display
 		self.userList = QListWidget(self)
 		self.userList.setGeometry(QtCore.QRect(self.chatDisplay.width()+15, 10, 150, 425))
-		self.userList.setFont(fontBold)
+		self.userList.setFont(QUIRC_FONT_BOLD)
 		self.userList.setObjectName("userList")
 		self.userList.itemDoubleClicked.connect(self.userClicked)
 		self.userList.installEventFilter(self)
@@ -761,13 +990,13 @@ class qpIRC_GUI(QMainWindow):
 		# Channel list display
 		self.channelList = QComboBox(self)
 		self.channelList.setGeometry(3,self.chatDisplay.height()+15,50,25)
-		self.channelList.setFont(fontBold)
+		self.channelList.setFont(QUIRC_FONT_BOLD)
 		self.channelList.activated.connect(self.channelChange)
 
 		# User input
 		self.ircInput = QLineEdit(self)
 		self.ircInput.setGeometry(QtCore.QRect(10, self.chatDisplay.height()+15, 605, 30))
-		self.ircInput.setFont(font)
+		self.ircInput.setFont(QUIRC_FONT)
 		self.ircInput.setObjectName("ircInput")
 		self.ircInput.returnPressed.connect(self.manageUserInput)
 
@@ -1713,6 +1942,18 @@ if __name__ == '__main__':
 
 	display_message('ASCII','','',LOGO,1)
 	display_message('RAW','','',f"<b>{APPLICATION} {VERSION}</b><br><i>{DESCRIPTION}</i>",1)
+
+	if os.path.isfile(COLOR_INFORMATION_FILE):
+		with open(COLOR_INFORMATION_FILE, "r") as read_color:
+			data = json.load(read_color)
+			SYSTEM_MESSAGE_COLOR = data["system"]
+			PUBLIC_MESSAGE_COLOR = data["public"]
+			PRIVATE_MESSAGE_COLOR = data["private"]
+			NOTICE_MESSAGE_COLOR = data["notice"]
+			ACTION_MESSAGE_COLOR = data["action"]
+			BACKGROUND_COLOR = data["background"]
+			GUI.chatDisplay.setStyleSheet(f"background-color: \"{BACKGROUND_COLOR}\";")
+
 
 	# Load user information if present
 	if os.path.isfile(USER_INFORMATION_FILE):
