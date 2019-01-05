@@ -15,3 +15,30 @@ Sends a message to a user or channel.
 
 /notice TARGET MESSAGE
 Sends a notice to a user or channel.
+
+/quit [MESSAGE]
+Disconnects from the IRC server.
+
+/kick CHANNEL USER [MESSAGE]
+Kicks a user from a channel
+
+/topic CHANNEL NEW_TOPIC
+Sets a channel's topic
+
+/whois USER [SERVER]
+Requests user data from the server
+
+/invite USER [CHANNEL]
+Invites a user to a channel; if CHANNEL is omitted, an invitation to the current channel is sent. CHANNEL must be specified if the server text display is open.
+
+/ison USER [USER...]
+Checks if a user in online (connected to the server) or not.
+
+/knock CHANNEL [MESSAGE]
+Requests an invitation for an invitation-only channel.
+
+/ping USER
+Sends a CTCP ping to a user or server.
+
+/raw MESSAGE
+Sends a raw, unprocessed message to the server. Used for supporting message and command types not supported by default in Quirc.

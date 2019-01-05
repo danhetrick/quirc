@@ -1,3 +1,23 @@
+Version 0.02667
+	* Channel chat is correctly saved and displayed on channel change
+	* Fixed a bug where some channel or user modes would not be displayed
+	* Made mode change displays more explanitory
+	* Fixed a bug in the color selection dialog
+	* Added the /quit command
+	* Added the /kick command
+	* Added the /topic command
+	* Added the /whois command
+	* Added the /invite command
+	* Added the /ison command
+	* Added the /knock command
+	* Added auto-joining channels
+	* Moved auto-connect and join to a submenu to 'Quirc' in the menubar
+	* Added /raw command
+	* Added /ping command
+
+Version 0.02665
+	* Font, if changed, is saved and used on restart
+
 Version 0.02662
 	* Display font can now be changed by the user
 	* User settings are loaded (and used) correctly

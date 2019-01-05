@@ -55,7 +55,7 @@ from PyQt5.QtCore import *
 from PyQt5 import QtCore
 
 APPLICATION = "Quirc"
-VERSION = "0.02662"
+VERSION = "0.02667"
 DESCRIPTION = "A Python3/Qt5 IRC client"
 
 # ============
@@ -78,7 +78,7 @@ PRIVATE_MESSAGE_COLOR = "#FF0000"
 SYSTEM_MESSAGE_COLOR = "#FFA500"
 ACTION_MESSAGE_COLOR = "#008000"
 NOTICE_MESSAGE_COLOR = "#800080"
-
+ERROR_MESSAGE_COLOR = "#FF3333"
 BACKGROUND_COLOR = "#FFFFFF"
 
 MAXIMUM_NICK_DISPLAY_SIZE = 10
@@ -110,6 +110,10 @@ MESSAGE_TEMPLATE = "<table border=\"0\" cellspacing=\"0\" cellpadding=\"0\"><tr>
 CHAT_TEMPLATE = "<table border=\"0\" cellspacing=\"0\" cellpadding=\"0\"><tr><td>&nbsp;</td><td><font color=\"!COLOR!\">!USER!</font>&nbsp;&nbsp;</td><td>!TEXT!</td></tr></table>"
 PRIVATE_TEMPLATE = "<table border=\"0\" cellspacing=\"0\" cellpadding=\"0\"><tr><td><font color=!COLOR!>&#9679;&nbsp;</font></td><td><font color=\"!COLOR!\">!USER!</font>&nbsp;&nbsp;</td><td><font color=!COLOR!>!TEXT!</font></td></tr></table>"
 
+ERROR_SYMBOL = u'\U0000274C'
+ERROR_TEMPLATE = f"<table border=\"0\" cellspacing=\"0\" cellpadding=\"0\"><tr><td><font color=!COLOR!>{ERROR_SYMBOL}</font></td><td>&nbsp;&nbsp;<font color=!COLOR!><b>!TEXT!</b></font></td></tr></table>"
+
+
 CHANNEL_DATABASE = []
 TOPIC_DATABASE = []
 
@@ -126,6 +130,9 @@ DATA_DIRECTORY = os.path.join(INSTALL_DIRECTORY, "data")
 USER_INFORMATION_FILE = os.path.join(INSTALL_DIRECTORY, "user.json")
 SERVER_INFORMATION_FILE = os.path.join(INSTALL_DIRECTORY, "server.json")
 COLOR_INFORMATION_FILE = os.path.join(INSTALL_DIRECTORY, "colors.json")
+FONT_INFORMATION_FILE = os.path.join(INSTALL_DIRECTORY, "font.json")
+
+CHANNEL_INFORMATION_FILE = os.path.join(INSTALL_DIRECTORY, "channels.json")
 
 SERVER_LIST_FILE = os.path.join(DATA_DIRECTORY, "servers.txt")
 COMMAND_HELP_FILE = os.path.join(DATA_DIRECTORY, "commands.txt")
@@ -138,15 +145,102 @@ USER_ICON_FILE = os.path.join(DATA_DIRECTORY, "user.png")
 COLOR_ICON_FILE = os.path.join(DATA_DIRECTORY, "colors.png")
 FONT_ICON_FILE = os.path.join(DATA_DIRECTORY, "font.png")
 DISCONNECT_ICON_FILE = os.path.join(DATA_DIRECTORY, "disconnect.png")
+CHAT_ICON_FILE = os.path.join(DATA_DIRECTORY, "chat.png")
+
+QUESTION_ICON_FILE = os.path.join(DATA_DIRECTORY, "question.png")
+CLIPBOARD_ICON_FILE = os.path.join(DATA_DIRECTORY, "clipboard.png")
+KICK_ICON_FILE = os.path.join(DATA_DIRECTORY, "kick.png")
 
 
 QUIRC_FONT_BOLD = QFont(DISPLAY_FONT, DISPLAY_FONT_SIZE, QFont.Bold)
 QUIRC_FONT = QFont(DISPLAY_FONT, DISPLAY_FONT_SIZE)
 
+AUTO_JOIN = []
 
 # ===========
 # | CLASSES |
 # ===========
+
+class BanUserDialog(QDialog):
+	global GUI
+	global CLIENT
+	def __init__(self,target,hostmask,parent=None):
+		super(BanUserDialog,self).__init__(parent)
+		self.target = target
+		self.setWindowTitle(f"{CHANNEL}")
+		self.setWindowIcon(QIcon(IRC_ICON_FILE))
+
+		hostmaskLayout = QHBoxLayout()
+		self.kd = QLabel("Hostmask")
+		self.kd.setFont(QUIRC_FONT_BOLD)
+		self.hostmask = QLineEdit()
+		self.hostmask.setFont(QUIRC_FONT)
+		self.hostmask.setText(hostmask)
+		hostmaskLayout.addWidget(self.kd)
+		hostmaskLayout.addWidget(self.hostmask)
+
+		self.go = QPushButton(f"Ban {target}")
+		self.go.setFont(QUIRC_FONT)
+		self.canc = QPushButton("Cancel")
+		self.canc.setFont(QUIRC_FONT)
+		self.go.clicked.connect(self.use)
+		self.canc.clicked.connect(self.close)
+
+		layout = QVBoxLayout()
+		layout.addLayout(hostmaskLayout)
+		layout.addWidget(self.go)
+		layout.addWidget(self.canc)
+		self.setLayout(layout)
+
+	def use(self):
+		if CLIENT_IS_CONNECTED:
+			h = self.hostmask.text()
+			if h == '':
+				CLIENT.mode(CHANNEL,True,"b",user=f"{self.target}")
+			else:
+				CLIENT.mode(CHANNEL,True,"b",user=f"{self.target}!{self.hostmask.text()}")
+		GUI.activateWindow()
+		self.close()
+
+class KickUserDialog(QDialog):
+	global GUI
+	global CLIENT
+	def __init__(self,target,hostmask,parent=None):
+		super(KickUserDialog,self).__init__(parent)
+		self.target = target
+		self.setWindowTitle(f"{CHANNEL}")
+		self.setWindowIcon(QIcon(IRC_ICON_FILE))
+
+		reasonLayout = QHBoxLayout()
+		self.kd = QLabel("Reason")
+		self.kd.setFont(QUIRC_FONT_BOLD)
+		self.reason = QLineEdit()
+		self.reason.setFont(QUIRC_FONT)
+		reasonLayout.addWidget(self.kd)
+		reasonLayout.addWidget(self.reason)
+
+		self.go = QPushButton(f"Kick {target}")
+		self.go.setFont(QUIRC_FONT)
+		self.canc = QPushButton("Cancel")
+		self.canc.setFont(QUIRC_FONT)
+		self.go.clicked.connect(self.use)
+		self.canc.clicked.connect(self.close)
+
+		layout = QVBoxLayout()
+		layout.addLayout(reasonLayout)
+		layout.addWidget(self.go)
+		layout.addWidget(self.canc)
+		self.setLayout(layout)
+
+	def use(self):
+		reason = self.reason.text()
+		if CLIENT_IS_CONNECTED:
+			if reason != '' or not reason.isspace():
+				CLIENT.kick(CHANNEL,self.target)
+			else:
+				CLIENT.kick(CHANNEL,self.target,reason=reason)
+		GUI.activateWindow()
+		self.close()
 
 class SetColorsDialog(QDialog):
 	global GUI
@@ -195,10 +289,20 @@ class SetColorsDialog(QDialog):
 			self.bgd.setText(f"<font color=\"{BACKGROUND_COLOR}\">Background Color</font>")
 			GUI.chatDisplay.setStyleSheet(f"background-color: \"{BACKGROUND_COLOR}\";")
 
+
+			# elf.chat_display.setStyleSheet("QTextBrowser { background-color: #000000; color: white }")
+
+
+	def selectErrorColor(self):
+		global ERROR_MESSAGE_COLOR
+		color = QColorDialog.getColor(initial=QColor(ERROR_MESSAGE_COLOR))
+		if color.isValid():
+			ERROR_MESSAGE_COLOR = color.name()
+			self.ed.setText(f"<font color=\"{ERROR_MESSAGE_COLOR}\">Error Text</font>")
+
 	def __init__(self,parent=None):
 		super(SetColorsDialog,self).__init__(parent)
 
-		QUIRC_FONT_BOLD = QFont(DISPLAY_FONT, DISPLAY_FONT_SIZE, QFont.Bold)
 		self.setWindowTitle("Set Colors")
 		self.setWindowIcon(QIcon(COLOR_ICON_FILE))
 
@@ -257,6 +361,22 @@ class SetColorsDialog(QDialog):
 
 		self.sd.setText(f"<font color=\"{SYSTEM_MESSAGE_COLOR}\">System Text&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font>")
 
+
+
+		errorLayout = QHBoxLayout()
+		self.ed = QLabel("Error Text")
+		self.ed.setFont(QUIRC_FONT_BOLD)
+		self.errorSet = QPushButton("Select Color")
+		self.errorSet.setFont(QUIRC_FONT)
+		self.errorSet.clicked.connect(self.selectErrorColor)
+		errorLayout.addWidget(self.ed)
+		errorLayout.addWidget(self.errorSet)
+
+		self.ed.setText(f"<font color=\"{ERROR_MESSAGE_COLOR}\">Error Text&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</font>")
+
+
+
+
 		bgLayout = QHBoxLayout()
 		self.bgd = QLabel("Background")
 		self.bgd.setFont(QUIRC_FONT_BOLD)
@@ -283,6 +403,7 @@ class SetColorsDialog(QDialog):
 		layout.addLayout(actionLayout)
 		layout.addLayout(noticeLayout)
 		layout.addLayout(systemLayout)
+		layout.addLayout(errorLayout)
 		layout.addLayout(bgLayout)
 		layout.addWidget(self.saveColor)
 		layout.addWidget(self.cancelColor)
@@ -296,7 +417,8 @@ class SetColorsDialog(QDialog):
 			"private": PRIVATE_MESSAGE_COLOR,
 			"notice": NOTICE_MESSAGE_COLOR,
 			"action": ACTION_MESSAGE_COLOR,
-			"background": BACKGROUND_COLOR
+			"background": BACKGROUND_COLOR,
+			"error": ERROR_MESSAGE_COLOR
 		}
 		with open(COLOR_INFORMATION_FILE, "w") as write_data:
 			json.dump(cf, write_data)
@@ -790,10 +912,21 @@ class qpIRC_GUI(QMainWindow):
 		self.chatDisplay.moveCursor(QTextCursor.End)
 
 	def addUser(self,text):
-		items = self.userList.findItems(text,Qt.MatchExactly)
-		if len(items) > 0:
-			return
-		self.userList.addItem(text)
+		p = text.split('!')
+		if len(p)==2:
+			nick = p[0]
+			host = p[1]
+			items = self.userList.findItems(nick,Qt.MatchExactly)
+			if len(items) > 0:
+				return
+			e = QListWidgetItem(nick)
+			e.setToolTip(host)
+			self.userList.addItem(e)
+		else:
+			items = self.userList.findItems(text,Qt.MatchExactly)
+			if len(items) > 0:
+				return
+			self.userList.addItem(text)
 
 	def removeUser( self, text ):
 		items = self.userList.findItems(text,Qt.MatchExactly)
@@ -899,6 +1032,8 @@ class qpIRC_GUI(QMainWindow):
 		self.channelList.setFont(QUIRC_FONT_BOLD)
 		self.ircInput.setFont(QUIRC_FONT)
 
+		saveFont()
+
 
 	def createUI(self):
 
@@ -914,6 +1049,20 @@ class qpIRC_GUI(QMainWindow):
 		self.disconnectAct.triggered.connect(self.menuDisconnect)
 		self.disconnectAct.setEnabled(False)
 		serverMenu.addAction(self.disconnectAct)
+
+		serverMenu.addSeparator()
+
+		autoconMenu = serverMenu.addMenu("Auto-connect")
+
+		self.autoAct = QAction(QIcon(CONNECT_ICON_FILE),"To current server on startup",self)
+		self.autoAct.triggered.connect(self.menuAuto)
+		self.autoAct.setEnabled(False)
+		autoconMenu.addAction(self.autoAct)
+
+		self.ajoinAct = QAction(QIcon(CONNECT_ICON_FILE),"To current channel(s) on startup",self)
+		self.ajoinAct.triggered.connect(self.menuAutoJoin)
+		self.ajoinAct.setEnabled(False)
+		autoconMenu.addAction(self.ajoinAct)
 
 		serverMenu.addSeparator()
 
@@ -948,10 +1097,17 @@ class qpIRC_GUI(QMainWindow):
 		fontAct.triggered.connect(self.menuFont)
 		settingsMenu.addAction(fontAct)
 
-		self.autoAct = QAction(QIcon(CONNECT_ICON_FILE),"Auto-connect to current server",self)
-		self.autoAct.triggered.connect(self.menuAuto)
-		self.autoAct.setEnabled(False)
-		settingsMenu.addAction(self.autoAct)
+		settingsMenu.addSeparator()
+
+		# self.autoAct = QAction(QIcon(CONNECT_ICON_FILE),"Auto-connect to current server",self)
+		# self.autoAct.triggered.connect(self.menuAuto)
+		# self.autoAct.setEnabled(False)
+		# settingsMenu.addAction(self.autoAct)
+
+		# self.ajoinAct = QAction(QIcon(CONNECT_ICON_FILE),"Auto-join to current channel(s)",self)
+		# self.ajoinAct.triggered.connect(self.menuAutoJoin)
+		# self.ajoinAct.setEnabled(False)
+		# settingsMenu.addAction(self.ajoinAct)
 
 		helpMenu = menubar.addMenu("Help")
 
@@ -1005,6 +1161,11 @@ class qpIRC_GUI(QMainWindow):
 		self.center()
 		self.show()
 
+	def menuAutoJoin(self):
+		cl = getChannelList()
+		with open(CHANNEL_INFORMATION_FILE, "w") as write_data:
+			json.dump(cl, write_data)
+
 	def linkClicked(self,url):
 		link = url.toString()
 		if url.host():
@@ -1019,14 +1180,22 @@ class qpIRC_GUI(QMainWindow):
 			item = source.itemAt(event.pos())
 			if item is None: return True
 
+			hostmask = item.toolTip()
+
 			menu = QMenu()
-			msgAct = menu.addAction('Send message')
-			noticeAct = menu.addAction('Send notice')
-			whoisAct = menu.addAction('WHOIS user')
+			msgAct = menu.addAction(QIcon(CHAT_ICON_FILE),'Send message')
+			noticeAct = menu.addAction(QIcon(CHAT_ICON_FILE),'Send notice')
 			menu.addSeparator()
-			urlAct = menu.addAction('Copy channel URL to clipboard')
-			topicAct = menu.addAction('Copy channel topic to clipboard')
-			copyAct = menu.addAction('Copy user list to clipboard')
+			whoisAct = menu.addAction(QIcon(QUESTION_ICON_FILE),'WHOIS user')
+			if CLIENT_IS_CHANNEL_OPERATOR:
+				kickAct = menu.addAction(QIcon(KICK_ICON_FILE),'Kick User')
+				banAct = menu.addAction(QIcon(KICK_ICON_FILE),'Ban User')
+
+			menu.addSeparator()
+			urlAct = menu.addAction(QIcon(CLIPBOARD_ICON_FILE),'Copy channel URL to clipboard')
+			topicAct = menu.addAction(QIcon(CLIPBOARD_ICON_FILE),'Copy channel topic to clipboard')
+			copyAct = menu.addAction(QIcon(CLIPBOARD_ICON_FILE),'Copy user list to clipboard')
+
 			action = menu.exec_(self.userList.mapToGlobal(event.pos()))
 
 			target = item.text()
@@ -1040,6 +1209,15 @@ class qpIRC_GUI(QMainWindow):
 				TARGET_IS_VOICED = False
 			target = target.replace("@","")
 			target = target.replace("+","")
+
+			if CLIENT_IS_CHANNEL_OPERATOR:
+				if action == banAct:
+					x = BanUserDialog(target,hostmask,parent=self)
+					x.show()
+
+				if action == kickAct:
+					x = KickUserDialog(target,hostmask,parent=self)
+					x.show()
 
 			if action == msgAct:
 				self.ircInput.setText(f"/msg {target} ")
@@ -1113,6 +1291,17 @@ class qpIRC_ClientConnection(irc.IRCClient):
 	def __init__(self):
 		self.beep = 1
 
+	def pong(self, user, secs):
+		p = user.split('!')
+		if len(p) == 2:
+			pnick = p[0]
+			phostmask = p[1]
+		else:
+			pnick = user
+			phostmask = user
+		secs = round(secs,8)
+		display_message('SYSTEM','','',f"Ping reply from {pnick}: {secs} seconds",1)
+
 	def register(self,nickname,hostname='foo',servername='bar'):
 		if SERVER_PASSWORD != '':
 			self.password = SERVER_PASSWORD
@@ -1130,6 +1319,9 @@ class qpIRC_ClientConnection(irc.IRCClient):
 		GUI.joinAct.setEnabled(True)
 		GUI.awayAct.setEnabled(True)
 		GUI.autoAct.setEnabled(True)
+		GUI.ajoinAct.setEnabled(True)
+
+		return irc.IRCClient.register(self,nickname,hostname='foo',servername='bar')
 
 	def connectionMade(self):
 		global CLIENT_IS_CONNECTED
@@ -1164,6 +1356,7 @@ class qpIRC_ClientConnection(irc.IRCClient):
 		GUI.joinAct.setEnabled(False)
 		GUI.awayAct.setEnabled(False)
 		GUI.autoAct.setEnabled(False)
+		GUI.ajoinAct.setEnabled(False)
 		if CLIENT_IS_AWAY:
 			CLIENT_IS_AWAY = False
 			GUI.awayAct.setText("Set client as away")
@@ -1183,6 +1376,11 @@ class qpIRC_ClientConnection(irc.IRCClient):
 			else:
 				self.join(CONNECT_ON_JOIN_CHANNEL)
 				CONNECT_ON_JOIN_CHANNEL = ''
+		# Auto-join channels
+		for c in AUTO_JOIN:
+			CLIENT.join(c)
+		# request full NAMES format
+		self.sendLine("PROTOCTL UHNAMES")
 
 	def joined(self, channel):
 		global CHANNEL
@@ -1308,6 +1506,7 @@ class qpIRC_ClientConnection(irc.IRCClient):
 		refreshUserlist()
 
 	def modeChanged(self, user, channel, set, modes, args):
+
 		p = user.split('!')
 		if len(p) == 2:
 			pnick = user.split('!')[0]
@@ -1320,27 +1519,27 @@ class qpIRC_ClientConnection(irc.IRCClient):
 			if set:
 				for u in args:
 					# u + operator
-					text = f"{pnick} gave ops to {u}"
+					text = f"{pnick} made {u} a channel operator"
 			else:
 				for u in args:
 					# u - operator
-					text = f"{pnick} took ops from {u}"
+					text = f"{pnick} removed channel operator status from {u}"
 		if 'v' in modes:
 			if set:
 				for u in args:
 					# u + voiced
-					text = f"{pnick} gave voiced to {u}"
+					text = f"{pnick} set {u}'s status to \"voiced\""
 			else:
 				for u in args:
 					# u - voiced
-					text = f"{pnick} took voiced from {u}"
+					text = f"{pnick} set {u}'s status to \"unvoiced\""
 		if 'p' in modes:
 			if set:
 				# channel status private
-				text = f"{pnick} set channel mode to private"
+				text = f"{pnick} set {channel} to private"
 			else:
 				# channel public
-				text = f"{pnick} set channel mode to public"
+				text = f"{pnick} set {channel} to public"
 		if 'k' in modes:
 			if len(args) >= 1:
 				nkey = args[0]
@@ -1348,15 +1547,22 @@ class qpIRC_ClientConnection(irc.IRCClient):
 				nkey = ''
 			if set:
 				# nkey = channel key
-				text = f"{pnick} set channel key to {nkey}"
+				text = f"{pnick} set {channel}'s key to {nkey}"
 			else:
 				# removed channel key
-				text = f"{pnick} removed channel key"
-		if channel == NICKNAME:
+				text = f"{pnick} removed {channel}'s key"
+
+		if len(text) == 0:
 			if set:
-				text = f"{pnick} set mode(s) +{''.join(modes)}"
+				if len(modes) > 1:
+					text = f"{pnick} set modes +{''.join(modes)} on {channel}"
+				else:
+					text = f"{pnick} set mode +{''.join(modes)} on {channel}"
 			else:
-				text = f"{pnick} set mode(s) -{''.join(modes)}"
+				if len(modes) > 1:
+					text = f"{pnick} set modes -{''.join(modes)} on {channel}"
+				else:
+					text = f"{pnick} set mode -{''.join(modes)} on {channel}"
 		refreshUserlist()
 		display_message('MODE',channel,user,text,1)
 
@@ -1375,8 +1581,10 @@ class qpIRC_ClientConnection(irc.IRCClient):
 		GUI.emptyUsers()
 		for nick in ulist:
 			if len(nick) == 0: continue
-			if nick == f"@{NICKNAME}":
-				CLIENT_IS_CHANNEL_OPERATOR = True
+			p = nick.split('!')
+			if len(p)==2:
+				if p[0] == f"@{NICKNAME}":
+					CLIENT_IS_CHANNEL_OPERATOR = True
 			GUI.addUser(nick)
 
 	def irc_RPL_WHOISCHANNELS(self, prefix, params):
@@ -1412,6 +1620,14 @@ class qpIRC_ClientConnection(irc.IRCClient):
 		nick = params[1]
 		display_message('SYSTEM','','',f"End of whois data for {nick}",1)
 
+	def irc_RPL_ISON(self, prefix, params):
+		uonline = params[1]
+		uonline.strip()
+		if len(uonline) == 0:
+			display_message('SYSTEM','','',f"Online users not found",1)
+		else:
+			display_message('SYSTEM','','',f"Online users: {uonline}",1)
+
 	def lineReceived(self, line):
 		try:
 			line2 = line.decode('UTF-8')
@@ -1421,43 +1637,43 @@ class qpIRC_ClientConnection(irc.IRCClient):
 		if len(d) >= 2:
 			if d[1].isalpha(): return irc.IRCClient.lineReceived(self, line)
 		if "Cannot join channel (+k)" in line2:
-			display_message('SYSTEM','','',"Cannot join channel (wrong or missing password)",1)
+			display_message('ERROR','','',"Cannot join channel (wrong or missing password)",1)
 		if "Cannot join channel (+l)" in line2:
-			display_message('SYSTEM','','',"Cannot join channel (channel is full)",1)
+			display_message('ERROR','','',"Cannot join channel (channel is full)",1)
 		if "Cannot join channel (+b)" in line2:
-			display_message('SYSTEM','','',"Cannot join channel (banned)",1)
+			display_message('ERROR','','',"Cannot join channel (banned)",1)
 		if "Cannot join channel (+i)" in line2:
-			display_message('SYSTEM','','',"Cannot join channel (channel is invite only)",1)
+			display_message('ERROR','','',"Cannot join channel (channel is invite only)",1)
 		if "not an IRC operator" in line2:
-			display_message('SYSTEM','','',"Permission denied (you're not an IRC operator",1)
+			display_message('ERROR','','',"Permission denied (you're not an IRC operator",1)
 		if "not channel operator" in line2:
-			display_message('SYSTEM','','',"Permission denied (you're not channel operator)",1)
+			display_message('ERROR','','',"Permission denied (you're not channel operator)",1)
 		if "is already on channel" in line2:
-			display_message('SYSTEM','','',"Invite failed (user is already in channel)",1)
+			display_message('ERROR','','',"Invite failed (user is already in channel)",1)
 		if "not on that channel" in line2:
-			display_message('SYSTEM','','',"Permission denied (you're not in channel)",1)
+			display_message('ERROR','','',"Permission denied (you're not in channel)",1)
 		if "aren't on that channel" in line2:
-			display_message('SYSTEM','','',"Permission denied (target user is not in channel)",1)
+			display_message('ERROR','','',"Permission denied (target user is not in channel)",1)
 		if "have not registered" in line2:
-			display_message('SYSTEM','','',"You're not registered",1)
+			display_message('ERROR','','',"You're not registered",1)
 		if "may not reregister" in line2:
-			display_message('SYSTEM','','',"You can't reregister",1)
+			display_message('ERROR','','',"You can't reregister",1)
 		if "enough parameters" in line2:
-			display_message('SYSTEM','','',"Error: not enough parameters supplied to command",1)
+			display_message('ERROR','','',"Error: not enough parameters supplied to command",1)
 		if "isn't among the privileged" in line2:
-			display_message('SYSTEM','','',"Registration refused (server isn't setup to allow connections from your host)",1)
+			display_message('ERROR','','',"Registration refused (server isn't setup to allow connections from your host)",1)
 		if "Password incorrect" in line2:
-			display_message('SYSTEM','','',"Permission denied (incorrect password)",1)
+			display_message('ERROR','','',"Permission denied (incorrect password)",1)
 		if "banned from this server" in line2:
-			display_message('SYSTEM','','',"You are banned from this server",1)
+			display_message('ERROR','','',"You are banned from this server",1)
 		if "kill a server" in line2:
-			display_message('SYSTEM','','',"Permission denied (you can't kill a server)",1)
+			display_message('ERROR','','',"Permission denied (you can't kill a server)",1)
 		if "O-lines for your host" in line2:
-			display_message('SYSTEM','','',"Error: no O-lines for your host",1)
+			display_message('ERROR','','',"Error: no O-lines for your host",1)
 		if "Unknown MODE flag" in line2:
-			display_message('SYSTEM','','',"Error: unknown MODE flag",1)
+			display_message('ERROR','','',"Error: unknown MODE flag",1)
 		if "change mode for other users" in line2:
-			display_message('SYSTEM','','',"Permission denied (can't change mode for other users)",1)
+			display_message('ERROR','','',"Permission denied (can't change mode for other users)",1)
 		return irc.IRCClient.lineReceived(self, line)
 
 
@@ -1517,8 +1733,9 @@ def changedChannel(channel):
 	updateTopic()
 	if channel != SERVER: refreshUserlist()
 	for c in getChat(channel):
-		if c.Channel == channel:
-			display_message(c.Type,c.Channel,c.User,c.Message,0)
+		display_message(c.Type,c.Channel,c.User,c.Message,0)
+		# if c.Channel == channel:
+		# 	display_message(c.Type,c.Channel,c.User,c.Message,0)
 	if channel == SERVER:
 		GUI.emptyUsers()
 		cl = getChannelList()
@@ -1658,7 +1875,7 @@ def handleCommands(text):
 				CLIENT.setNick(newnick)
 				refreshUserlist()
 			else:
-				display_message('SYSTEM','','',"Can't change nickname (not connected to a server)",1)
+				display_message('ERROR','','',"Can't change nickname (not connected to a server)",1)
 			return True
 
 	if len(tokens) != 2:
@@ -1680,7 +1897,7 @@ def handleCommands(text):
 					if TURN_URLS_INTO_LINKS: msg = format_links(msg)
 					display_message('ACTION',CHANNEL,NICKNAME,msg,1)
 			else:
-				display_message('SYSTEM','','',"Can't send CTCP action message (not connected to a server)",1)
+				display_message('ERROR','','',"Can't send CTCP action message (not connected to a server)",1)
 			return True
 
 	if len(tokens) >= 1 and tokens[0].lower() == '/me':
@@ -1701,7 +1918,7 @@ def handleCommands(text):
 				if TURN_URLS_INTO_LINKS: msg = format_links(msg)
 				display_message('OUTPRIVATE',target,NICKNAME,msg,1)
 			else:
-				display_message('SYSTEM','','',"Can't send message (not connected to a server)",1)
+				display_message('ERROR','','',"Can't send message (not connected to a server)",1)
 			return True
 
 	if len(tokens) >= 1 and tokens[0].lower() == '/msg':
@@ -1722,11 +1939,224 @@ def handleCommands(text):
 				if TURN_URLS_INTO_LINKS: msg = format_links(msg)
 				display_message('OUTNOTICE',target,NICKNAME,msg,1)
 			else:
-				display_message('SYSTEM','','',"Can't send notice (not connected to a server)",1)
+				display_message('ERROR','','',"Can't send notice (not connected to a server)",1)
 			return True
 
 	if len(tokens) >= 1 and tokens[0].lower() == '/notice':
 		display_message('SYSTEM','','',"USAGE: /notice TARGET MESSAGE",1)
+		return True
+
+	# |======|
+	# | QUIT |
+	# |======|
+
+	if len(tokens) == 1 and tokens[0].lower() == '/quit':
+		if CLIENT_IS_CONNECTED:
+			CLIENT.quit()
+		else:
+			display_message('ERROR','','',"Can't quit (not connected to a server)",1)
+		return True
+
+	if len(tokens) > 1 and tokens[0].lower() == '/quit':
+		tokens.pop(0)
+		msg = ' '.join(tokens)
+		CLIENT.quit(message=msg)
+		return True
+
+	# |======|
+	# | KICK |
+	# |======|
+	
+	if len(tokens) == 3 and tokens[0].lower() == '/kick':
+		if CLIENT_IS_CONNECTED:
+			chan = tokens[1]
+			user = tokens[2]
+			CLIENT.kick(chan,user)
+		else:
+			display_message('ERROR','','',"Can't kick user (not connected to a server)",1)
+		return True
+
+	if len(tokens) > 3 and tokens[0].lower() == '/kick':
+		if CLIENT_IS_CONNECTED:
+			tokens.pop(0)
+			chan = tokens.pop(0)
+			user = tokens.pop(0)
+			msg = ' '.join(tokens)
+			CLIENT.kick(chan,user,reason=msg)
+		else:
+			display_message('ERROR','','',"Can't kick user (not connected to a server)",1)
+		return True
+
+	if len(tokens) < 3 and tokens[0].lower() == '/kick':
+		display_message('SYSTEM','','',"USAGE: /quit CHANNEL USER [MESSAGE]",1)
+		return True
+
+	# |=======|
+	# | TOPIC |
+	# |=======|
+	
+	if len(tokens) > 2 and tokens[0].lower() == '/topic':
+		if CLIENT_IS_CONNECTED:
+			tokens.pop(0)
+			chan = tokens.pop(0)
+			msg = ' '.join(tokens)
+			CLIENT.topic(chan,topic=msg)
+		else:
+			display_message('ERROR','','',"Can't set channel topic (not connected to a server)",1)
+		return True
+
+	if len(tokens) < 2 and tokens[0].lower() == '/topic':
+		display_message('SYSTEM','','',"USAGE: /topic CHANNEL NEW_TOPIC",1)
+		return True
+
+	# |=======|
+	# | WHOIS |
+	# |=======|
+
+	if len(tokens) == 2 and tokens[0].lower() == '/whois':
+		if CLIENT_IS_CONNECTED:
+			target = tokens[1]
+			CLIENT.whois(target)
+		else:
+			display_message('ERROR','','',"Can't request WHOIS (not connected to a server)",1)
+		return True
+
+	if len(tokens) == 3 and tokens[0].lower() == '/whois':
+		if CLIENT_IS_CONNECTED:
+			target = tokens[1]
+			serv = tokens[2]
+			CLIENT.whois(target,server=serv)
+		else:
+			display_message('ERROR','','',"Can't request WHOIS (not connected to a server)",1)
+		return True
+
+	if len(tokens) > 3 and tokens[0].lower() == '/whois':
+		display_message('SYSTEM','','',"USAGE: /whois USER [SERVER]",1)
+		return True
+
+	if len(tokens) == 1 and tokens[0].lower() == '/whois':
+		display_message('SYSTEM','','',"USAGE: /whois USER [SERVER]",1)
+		return True
+
+	# |========|
+	# | INVITE |
+	# |========|
+
+	if len(tokens) == 3 and tokens[0].lower() == '/invite':
+		if CLIENT_IS_CONNECTED:
+			user = tokens[1]
+			chan = tokens[2]
+			CLIENT.sendLine(f"INVITE {user} {chan}")
+		else:
+			display_message('ERROR','','',"Can't invite user (not connected to a server)",1)
+		return True
+
+	if len(tokens) == 2 and tokens[0].lower() == '/invite':
+		if CLIENT_IS_CONNECTED:
+			if CHANNEL == '':
+				display_message('ERROR','','',"Channel must be specified",1)
+				display_message('SYSTEM','','',"USAGE: /invite USER CHANNEL",1)
+				return True
+			user = tokens[1]
+			CLIENT.sendLine(f"INVITE {user} {CHANNEL}")
+		else:
+			display_message('ERROR','','',"Can't invite user (not connected to a server)",1)
+		return True
+
+	if len(tokens) > 3 and tokens[0].lower() == '/invite':
+		if CHANNEL != '':
+			display_message('SYSTEM','','',"USAGE: /invite USER [CHANNEL]",1)
+			display_message('SYSTEM','','',"If CHANNEL is omitted, an invitation to the current channel is sent",1)
+		else:
+			display_message('SYSTEM','','',"USAGE: /invite USER CHANNEL",1)
+		return True
+
+	if len(tokens) == 1 and tokens[0].lower() == '/invite':
+		if CHANNEL != '':
+			display_message('SYSTEM','','',"USAGE: /invite USER [CHANNEL]",1)
+			display_message('SYSTEM','','',"If CHANNEL is omitted, an invitation to the current channel is sent",1)
+		else:
+			display_message('SYSTEM','','',"USAGE: /invite USER CHANNEL",1)
+		return True
+
+	# |======|
+	# | ISON |
+	# |======|
+
+	if len(tokens) >= 2 and tokens[0].lower() == '/ison':
+		if CLIENT_IS_CONNECTED:
+			tokens.pop(0)
+			users = ' '.join(tokens)
+			CLIENT.sendLine(f"ISON {users}")
+		else:
+			display_message('ERROR','','',"Can't check user status (not connected to a server)",1)
+		return True
+
+	if len(tokens) == 1 and tokens[0].lower() == '/ison':
+		display_message('SYSTEM','','',"USAGE: /ison USER [USER...]",1)
+		return True
+
+	# |=======|
+	# | KNOCK |
+	# |=======|
+
+	if len(tokens) == 2 and tokens[0].lower() == '/knock':
+		if CLIENT_IS_CONNECTED:
+			chan = tokens[1]
+			CLIENT.sendLine(f"KNOCK {chan}")
+		else:
+			display_message('ERROR','','',"Can't knock channel (not connected to a server)",1)
+		return True
+
+	if len(tokens) >= 3 and tokens[0].lower() == '/knock':
+		if CLIENT_IS_CONNECTED:
+			tokens.pop(0)
+			chan = tokens.pop(0)
+			msg = ' '.join(tokens)
+			CLIENT.sendLine(f"KNOCK {chan} {msg}")
+		else:
+			display_message('ERROR','','',"Can't knock channel (not connected to a server)",1)
+		return True
+
+	if len(tokens) == 1 and tokens[0].lower() == '/knock':
+		display_message('SYSTEM','','',"USAGE: /knock CHANNEL [MESSAGE]",1)
+		return True
+
+	# |=====|
+	# | RAW |
+	# |=====|
+
+	if len(tokens) > 1 and tokens[0].lower() == '/raw':
+		if CLIENT_IS_CONNECTED:
+			tokens.pop(0)
+			msg = ' '.join(tokens)
+			CLIENT.sendLine(f"{msg}")
+		else:
+			display_message('ERROR','','',"Can't send raw message (not connected to a server)",1)
+		return True
+
+	if len(tokens) == 1 and tokens[0].lower() == '/raw':
+		display_message('SYSTEM','','',"USAGE: /raw MESSAGE",1)
+		return True
+
+	# |======|
+	# | PING |
+	# |======|
+
+	if len(tokens) == 2 and tokens[0].lower() == '/ping':
+		if CLIENT_IS_CONNECTED:
+			target = tokens[1]
+			CLIENT.ping(target)
+		else:
+			display_message('ERROR','','',"Can't send ping (not connected to a server)",1)
+		return True
+
+	if len(tokens) == 1 and tokens[0].lower() == '/ping':
+		display_message('SYSTEM','','',"USAGE: /ping USER",1)
+		return True
+
+	if len(tokens) > 2 and tokens[0].lower() == '/ping':
+		display_message('SYSTEM','','',"USAGE: /ping USER",1)
 		return True
 
 def handleInput(text):
@@ -1736,7 +2166,7 @@ def handleInput(text):
 
 	if len(text)>=1 and text[0] == '/':
 		if not handleCommands(text):
-			display_message('SYSTEM','','',f"Unrecognized command: {text}",1)
+			display_message('ERROR','','',f"Unrecognized command: {text}",1)
 			return
 		else:
 			return
@@ -1886,6 +2316,9 @@ def display_message(mtype,channel,user,message,store):
 		response = f"<pre>{message}</pre>"
 	elif mtype.lower() == 'raw':
 		response = f"{message}"
+	elif mtype.lower() == 'error':
+		response = ERROR_TEMPLATE.replace('!COLOR!',ERROR_MESSAGE_COLOR)
+		response = response.replace('!TEXT!',message)
 	else:
 		return
 	doPrint = True
@@ -1901,8 +2334,9 @@ def display_message(mtype,channel,user,message,store):
 				m = Chat(mtype,CHANNEL,user,message)
 				storeChat(m)
 		else:
-			if channel != '' and len(channel)>=1:
-				if channel[0] != '#' or channel[0] !='&': return
+			if len(channel)>=1:
+				if channel[0] != '#':
+					if channel[0] !='&': return
 			m = Chat(mtype,channel,user,message)
 			storeChat(m)
 
@@ -1930,11 +2364,28 @@ def sortNicks(nicklist):
 		sortnicks.append(nick)
 	return sortnicks
 
+def saveFont():
+	with open(FONT_INFORMATION_FILE, "w") as write_data:
+		json.dump(QUIRC_FONT.toString(), write_data)
+
+def loadFont():
+	if os.path.isfile(FONT_INFORMATION_FILE):
+		with open(FONT_INFORMATION_FILE, "r") as read_font:
+			global QUIRC_FONT
+			global QUIRC_FONT_BOLD
+			data = json.load(read_font)
+			QUIRC_FONT = QFont()
+			QUIRC_FONT.fromString(data)
+			QUIRC_FONT_BOLD = QUIRC_FONT
+			QUIRC_FONT_BOLD.setBold(True)
+
 # ================
 # | MAIN PROGRAM |
 # ================
 
 if __name__ == '__main__':
+
+	loadFont()
 
 	# Spawn the GUI
 	global GUI
@@ -1952,15 +2403,20 @@ if __name__ == '__main__':
 			NOTICE_MESSAGE_COLOR = data["notice"]
 			ACTION_MESSAGE_COLOR = data["action"]
 			BACKGROUND_COLOR = data["background"]
+			ERROR_MESSAGE_COLOR = data["error"]
 			GUI.chatDisplay.setStyleSheet(f"background-color: \"{BACKGROUND_COLOR}\";")
 
+	# Load user information if present
+	if os.path.isfile(CHANNEL_INFORMATION_FILE):
+		with open(CHANNEL_INFORMATION_FILE, "r") as read_chans:
+			AUTO_JOIN = json.load(read_chans)
 
 	# Load user information if present
 	if os.path.isfile(USER_INFORMATION_FILE):
 		with open(USER_INFORMATION_FILE, "r") as read_user:
 			data = json.load(read_user)
 			if len(data) != 3:
-				display_message('SYSTEM','','',f"User data in {USER_INFORMATION_FILE} is malformed",1)
+				display_message('ERROR','','',f"User data in {USER_INFORMATION_FILE} is malformed",1)
 			else:
 				NICKNAME = data[0]
 				REALNAME = data[1]
@@ -1972,7 +2428,7 @@ if __name__ == '__main__':
 		with open(SERVER_INFORMATION_FILE, "r") as read_serv:
 			data = json.load(read_serv)
 			if len(data) != 4:
-				display_message('SYSTEM','','',f"Server data in {SERVER_INFORMATION_FILE} is malformed",1)
+				display_message('ERROR','','',f"Server data in {SERVER_INFORMATION_FILE} is malformed",1)
 			else:
 				SERVER = data[1]
 				PORT = int(data[2])
