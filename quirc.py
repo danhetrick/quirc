@@ -55,8 +55,8 @@ from PyQt5.QtCore import *
 from PyQt5 import QtCore
 
 APPLICATION = "Quirc"
-VERSION = "0.02667"
-DESCRIPTION = "A Python3/Qt5 IRC client"
+VERSION = "0.02670"
+DESCRIPTION = "A Python3/Qt5/Twisted IRC client"
 
 # ============
 # | SETTINGS |
@@ -106,14 +106,6 @@ USER_INPUT_HISTORY_MAX_SIZE = 20
 CHANNEL = ''
 CHANNEL_USER_LIST = []
 
-MESSAGE_TEMPLATE = "<table border=\"0\" cellspacing=\"0\" cellpadding=\"0\"><tr><td><font color=!COLOR!>&#9679;&nbsp;</font></td><td>&nbsp;&nbsp;<font color=!COLOR!>!TEXT!</font></td></tr></table>"
-CHAT_TEMPLATE = "<table border=\"0\" cellspacing=\"0\" cellpadding=\"0\"><tr><td>&nbsp;</td><td><font color=\"!COLOR!\">!USER!</font>&nbsp;&nbsp;</td><td>!TEXT!</td></tr></table>"
-PRIVATE_TEMPLATE = "<table border=\"0\" cellspacing=\"0\" cellpadding=\"0\"><tr><td><font color=!COLOR!>&#9679;&nbsp;</font></td><td><font color=\"!COLOR!\">!USER!</font>&nbsp;&nbsp;</td><td><font color=!COLOR!>!TEXT!</font></td></tr></table>"
-
-ERROR_SYMBOL = u'\U0000274C'
-ERROR_TEMPLATE = f"<table border=\"0\" cellspacing=\"0\" cellpadding=\"0\"><tr><td><font color=!COLOR!>{ERROR_SYMBOL}</font></td><td>&nbsp;&nbsp;<font color=!COLOR!><b>!TEXT!</b></font></td></tr></table>"
-
-
 CHANNEL_DATABASE = []
 TOPIC_DATABASE = []
 
@@ -127,39 +119,396 @@ LOGO = """ ██████╗ ██╗   ██╗██╗█████�
 INSTALL_DIRECTORY = sys.path[0]
 DATA_DIRECTORY = os.path.join(INSTALL_DIRECTORY, "data")
 
-USER_INFORMATION_FILE = os.path.join(INSTALL_DIRECTORY, "user.json")
-SERVER_INFORMATION_FILE = os.path.join(INSTALL_DIRECTORY, "server.json")
-COLOR_INFORMATION_FILE = os.path.join(INSTALL_DIRECTORY, "colors.json")
-FONT_INFORMATION_FILE = os.path.join(INSTALL_DIRECTORY, "font.json")
+CONFIG_DIRECTORY = os.path.join(INSTALL_DIRECTORY, "config")
+if not os.path.isdir(CONFIG_DIRECTORY):
+	try:
+		os.mkdir(CONFIG_DIRECTORY)
+	except OSError:
+		print(f"Creation of {CONFIG_DIRECTORY} failed. Exiting...")
+		app.quit()
 
-CHANNEL_INFORMATION_FILE = os.path.join(INSTALL_DIRECTORY, "channels.json")
+USER_INFORMATION_FILE = os.path.join(CONFIG_DIRECTORY, "user.json")
+SERVER_INFORMATION_FILE = os.path.join(CONFIG_DIRECTORY, "server.json")
+COLOR_INFORMATION_FILE = os.path.join(CONFIG_DIRECTORY, "colors.json")
+FONT_INFORMATION_FILE = os.path.join(CONFIG_DIRECTORY, "font.json")
+CHANNEL_INFORMATION_FILE = os.path.join(CONFIG_DIRECTORY, "channels.json")
 
 SERVER_LIST_FILE = os.path.join(DATA_DIRECTORY, "servers.txt")
-COMMAND_HELP_FILE = os.path.join(DATA_DIRECTORY, "commands.txt")
 
-IRC_ICON_FILE = os.path.join(DATA_DIRECTORY, "irc.png")
-GEAR_ICON_FILE = os.path.join(DATA_DIRECTORY, "gear.png")
-INFO_ICON_FILE = os.path.join(DATA_DIRECTORY, "info.png")
+QUIRC_ICON_FILE = os.path.join(DATA_DIRECTORY, "qicon.png")
 CONNECT_ICON_FILE = os.path.join(DATA_DIRECTORY, "connect.png")
 USER_ICON_FILE = os.path.join(DATA_DIRECTORY, "user.png")
 COLOR_ICON_FILE = os.path.join(DATA_DIRECTORY, "colors.png")
 FONT_ICON_FILE = os.path.join(DATA_DIRECTORY, "font.png")
 DISCONNECT_ICON_FILE = os.path.join(DATA_DIRECTORY, "disconnect.png")
 CHAT_ICON_FILE = os.path.join(DATA_DIRECTORY, "chat.png")
-
-QUESTION_ICON_FILE = os.path.join(DATA_DIRECTORY, "question.png")
 CLIPBOARD_ICON_FILE = os.path.join(DATA_DIRECTORY, "clipboard.png")
 KICK_ICON_FILE = os.path.join(DATA_DIRECTORY, "kick.png")
+BOOKMARK_ICON_FILE = os.path.join(DATA_DIRECTORY, "bookmark.png")
+WHOIS_ICON_FILE = os.path.join(DATA_DIRECTORY, "whois.png")
+EXIT_ICON_FILE = os.path.join(DATA_DIRECTORY, "exit.png")
+WEB_ICON_FILE = os.path.join(DATA_DIRECTORY, "web.png")
+AUTO_ICON_FILE = os.path.join(DATA_DIRECTORY, "auto.png")
+SYSTEM_ICON_FILE = os.path.join(DATA_DIRECTORY, "system.png")
+IRC_ICON_FILE = os.path.join(DATA_DIRECTORY, "irc.png")
+FILE_ICON_FILE = os.path.join(DATA_DIRECTORY, "file.png")
+BAN_ICON_FILE = os.path.join(DATA_DIRECTORY, "ban.png")
+QUIRC_LOGO_FILE = os.path.join(DATA_DIRECTORY, "quirc.png")
 
+FIRACODE_FONT_LOCATION = os.path.join(DATA_DIRECTORY, "FiraCode-Regular.ttf")
+FIRACODE_BOLD_FONT_LOCATION = os.path.join(DATA_DIRECTORY, "FiraCode-Bold.ttf")
 
-QUIRC_FONT_BOLD = QFont(DISPLAY_FONT, DISPLAY_FONT_SIZE, QFont.Bold)
-QUIRC_FONT = QFont(DISPLAY_FONT, DISPLAY_FONT_SIZE)
+id = QFontDatabase.addApplicationFont(FIRACODE_FONT_LOCATION)
+_fontstr = QFontDatabase.applicationFontFamilies(id)[0]
+QUIRC_FONT = QFont(_fontstr, DISPLAY_FONT_SIZE)
+
+id = QFontDatabase.addApplicationFont(FIRACODE_BOLD_FONT_LOCATION)
+_fontstr = QFontDatabase.applicationFontFamilies(id)[0]
+QUIRC_FONT_BOLD = QFont(_fontstr, DISPLAY_FONT_SIZE)
+QUIRC_FONT_BOLD.setBold(True)
 
 AUTO_JOIN = []
+
+LOADED_USER_INFO_FROM_FILE = False
+
+MESSAGE_HEIGHT = 25
+MESSAGE_ICON_SPACE_WIDTH = 30
+
+MESSAGE_ICON_WIDTH = 15
+MESSAGE_ICON_HEIGHT = 15
+
+ERROR_ICON = "error.png"
+NOTICE_ICON = "chat.png"
+PRIVATE_ICON = "chat.png"
+ACTION_ICON = "user.png"
+IRC_ICON = "irc.png"
+SYSTEM_ICON = "system.png"
+QUIRC_LOGO = "quirc.png"
+
+ICON_TEMPLATE = f"""
+<table style="width: 100%;" border="0">
+  <tbody>
+	<tr>
+	  <td style="width: {MESSAGE_ICON_SPACE_WIDTH}px; height: {MESSAGE_HEIGHT}px; text-align: center; vertical-align: middle;"><img src=\"!ICON!\" height=\"{MESSAGE_ICON_WIDTH}\" width=\"{MESSAGE_ICON_HEIGHT}\"></td>
+	  <td style="width: 10px; height: {MESSAGE_HEIGHT}px; ">
+	  </td>
+	  <td style="text-align: center; vertical-align: middle;"><font color=\"!COLOR!\">&nbsp;&nbsp;!TEXT!</font></td>
+	</tr>
+  </tbody>
+</table>
+"""
+
+ICON_NAME_TEMPLATE = f"""
+<table style="width: 100%;" border="0">
+  <tbody>
+	<tr>
+	  <td style="width: {MESSAGE_ICON_SPACE_WIDTH}px; height: {MESSAGE_HEIGHT}px; text-align: center; vertical-align: middle;"><img src=\"!ICON!\" height=\"{MESSAGE_ICON_WIDTH}\" width=\"{MESSAGE_ICON_HEIGHT}\">&nbsp;</td>
+	  <td style="width: 150px; height: {MESSAGE_HEIGHT}px; text-align: center; vertical-align: middle;"><font color=\"!COLOR!\">&nbsp;!USER!</font></td>
+	  </td>
+	  <td style="text-align: center; vertical-align: middle;"><font color=\"!COLOR!\">&nbsp;&nbsp;!TEXT!</font></td>
+	</tr>
+  </tbody>
+</table>
+"""
+
+CHAT_TEMPLATE = f"""
+<table style="width: 100%;" border="0">
+  <tbody>
+	<tr>
+	  <td style="width: {MESSAGE_ICON_SPACE_WIDTH}px; height: {MESSAGE_HEIGHT}px; text-align: center; vertical-align: middle;">&nbsp;</td>
+	  <td style="width: 150px; height: {MESSAGE_HEIGHT}px; text-align: center; vertical-align: middle;"><font color=\"!COLOR!\">!USER!</font>&nbsp;&nbsp;</td>
+	  <td style="text-align: center; vertical-align: middle;">!TEXT!</td>
+	</tr>
+  </tbody>
+</table>
+"""
 
 # ===========
 # | CLASSES |
 # ===========
+
+class AboutDialog(QDialog):
+	
+	def __init__(self,parent=None):
+		super(AboutDialog,self).__init__(parent)
+
+		self.setWindowTitle(f"About {APPLICATION}")
+		self.setWindowIcon(QIcon(QUIRC_ICON_FILE))
+
+		logo = QLabel()
+		pixmap = QPixmap(QUIRC_LOGO_FILE)
+		logo.setPixmap(pixmap)
+
+		napp = QLabel(f"Version {VERSION}")
+		napp.setAlignment(Qt.AlignCenter)
+		napp.setFont(QUIRC_FONT)
+
+		dapp = QLabel(f"{DESCRIPTION}")
+		dapp.setAlignment(Qt.AlignCenter)
+		dapp.setFont(QUIRC_FONT)
+
+		uapp = QLabel("<a href=\"https://github.com/danhetrick/quirc\">https://github.com/danhetrick/quirc</a>")
+		uapp.setAlignment(Qt.AlignCenter)
+		uapp.setFont(QUIRC_FONT)
+		uapp.setOpenExternalLinks(True)
+
+		aexit = QPushButton("Ok")
+		aexit.setFont(QUIRC_FONT)
+		aexit.clicked.connect(self.close)
+
+		finalLayout = QVBoxLayout()
+		finalLayout.addWidget(logo)
+		finalLayout.addWidget(napp)
+		finalLayout.addWidget(dapp)
+		finalLayout.addWidget(uapp)
+		finalLayout.addWidget(aexit)
+		self.setLayout(finalLayout)
+
+class HelpDialog(QDialog):
+	global GUI
+	global CLIENT
+
+	def cmdChange(self):
+		cmd = self.cmdDisplay.currentText()
+
+		if cmd == "What is IRC?":
+			self.helpDisplay.setText("")
+			self.helpDisplay.setHtml("""
+"Internet Relay Chat (IRC) is an application layer protocol that facilitates communication in the form of text. The chat process works on a client/server networking model. IRC clients are computer programs that users can install on their system or web based applications running either locally in the browser or on 3rd party server. These clients communicate with chat servers to transfer messages to other clients. IRC is mainly designed for group communication in discussion forums, called channels, but also allows one-on-one communication via private messages..."
+<br><br><i>--Wikipedia</i><br>
+<i>https://en.wikipedia.org/wiki/Internet_Relay_Chat</i>
+				""")
+
+		if cmd == "Color Key":
+			self.helpDisplay.setText("")
+			self.helpDisplay.append(f"Different types of messages are displayed in different colors, depending on what kind of message it is.<br>")
+
+			self.helpDisplay.append(f"""
+<table style="width: 100%;" border="0">
+      <tbody>
+        <tr>
+          <td style="text-align: center; vertical-align: middle; background-color: #EAECEE;"><h2><font color=\"{PUBLIC_MESSAGE_COLOR}\">Public Messages</font></h2>
+          This is the color of standard IRC chat messages.</td>
+          <td style="text-align: center; vertical-align: middle; background-color: #EAECEE;"><h2>&nbsp;<font color=\"{PRIVATE_MESSAGE_COLOR}\">Private Messages</font></h2>
+          This is the color of IRC private messages.</td>
+        </tr>
+        <tr>
+          <td style="text-align: center; vertical-align: middle; background-color: #EAECEE;"><h2><font color=\"{NOTICE_MESSAGE_COLOR}\">Notice Messages</font></h2>
+          This is the color of IRC notice messages.</td>
+          <td style="text-align: center; vertical-align: middle; background-color: #EAECEE;"><h2>&nbsp;<font color=\"{ACTION_MESSAGE_COLOR}\">Action Messages</font></h2>
+          This is the color of CTCP action messages.</td>
+        </tr>
+        <tr>
+          <td style="text-align: center; vertical-align: middle; background-color: #EAECEE;"><h2><font color=\"{SYSTEM_MESSAGE_COLOR}\">System Messages</font></h2>
+          This is the color <b>Quirc</b> uses to display system information.</td>
+          <td style="text-align: center; vertical-align: middle; background-color: #EAECEE;"><h2><font color=\"{ERROR_MESSAGE_COLOR}\">Error Messages</font></h2>
+          This is the color <b>Quirc</b> uses to display errors.<br></td>
+        </tr>
+      </tbody>
+    </table>
+				""")
+
+		if cmd == "Introduction":
+			self.helpDisplay.setText("")
+			self.helpDisplay.setText(f"<h1>{APPLICATION} {VERSION} Help</h1>")
+			self.helpDisplay.append(f"Thank you for using <b>{APPLICATION}</b>!")
+			self.helpDisplay.append(f"Select a topic or command to read documentation about that topic or command.")
+			self.helpDisplay.append("All commands begin with a back slash (<b>/</b>), and take one or more arguments. Optional arguments are contained in <b>[</b> and <b>]</b>.")
+
+		if cmd == "/join":
+			self.helpDisplay.setText("")
+			self.helpDisplay.append("<h1><b>/join</b> <i>CHANNEL [KEY]</i></h1>")
+			self.helpDisplay.append("Joins a channel. If the command is issued with no arguments, a dialog window will open ask for the channel (and channel key, if needed) to join. The channel key is only needed if the channel has the +k mode enabled.<br>")
+			self.helpDisplay.append("<h2>Examples:</h2> <b>/join #quirc</b><br><b>/join #privatechannel ch4ngem3</b><br>")
+
+		if cmd == "/part":
+			self.helpDisplay.setText("")
+			self.helpDisplay.append("<h1><b>/part</b> <i>CHANNEL</i></h1>")
+			self.helpDisplay.append("Leaves a channel on the IRC server.<br>")
+			self.helpDisplay.append("<h2>Example:</h2> <b>/part #quirc</b><br>")
+
+		if cmd == "/nick":
+			self.helpDisplay.setText("")
+			self.helpDisplay.append("<h1><b>/nick</b> <i>NEW_NICKNAME</i></h1>")
+			self.helpDisplay.append("Changes the user's nickname. All nicknames on a server are unique; if the chosen nickname is already taken, a random number is attached to the desired nickname, and that is set as the nickname.<br>")
+			self.helpDisplay.append("<h2>Example:</h2> <b>/nick Alice509</b><br>")
+
+		if cmd == "/me":
+			self.helpDisplay.setText("")
+			self.helpDisplay.append("<h1><b>/me</b> <i>MESSAGE</i></h1>")
+			self.helpDisplay.append("Sends a CTCP action message. These appear as action descriptions; for example, if your username was \"funnygal\", and you used the command \"/me eats an apple\", the message would appear to other IRC users as \"funnygal eats an apple\".<br>")
+			self.helpDisplay.append("<h2>Examples:</h2> <b>/me waves at everyone</b><br><b>/me looks shocked!</b><br>")
+
+		if cmd == "/msg":
+			self.helpDisplay.setText("")
+			self.helpDisplay.append("<h1><b>/msg</b> <i>TARGET MESSAGE</i></h1>")
+			self.helpDisplay.append("Sends a message to a user or channel.<br>")
+			self.helpDisplay.append("<h2>Examples:</h2> <b>/msg bob how are you doing?</b><br><b>/msg #quirc Hello, everyone!</b><br>")
+
+		if cmd == "/notice":
+			self.helpDisplay.setText("")
+			self.helpDisplay.append("<h1><b>/notice</b> <i>TARGET MESSAGE</i></h1>")
+			self.helpDisplay.append("Sends a notice to a user or channel.<br>")
+			self.helpDisplay.append("<h2>Examples:</h2> <b>/notice alice We're in #quirc!</b><br><b>/notice #quirc Alice should be here soon.</b><br>")
+
+		if cmd == "/quit":
+			self.helpDisplay.setText("")
+			self.helpDisplay.append("<h1><b>/quit</b> <i>[MESSAGE]</i></h1>")
+			self.helpDisplay.append("Disconnects from the IRC server, optionally sending a parting message.<br>")
+			self.helpDisplay.append("<h2>Examples:</h2> <b>/quit</b><br><b>/quit See ya later!</b><br>")
+
+		if cmd == "/kick":
+			self.helpDisplay.setText("")
+			self.helpDisplay.append("<h1><b>/kick</b> <i>CHANNEL USER [MESSAGE]</i></h1>")
+			self.helpDisplay.append("Kicks a user from a channel, sending an optional message. Only channel operators can kick users from a channel.<br>")
+			self.helpDisplay.append("<h2>Examples:</h2> <b>/kick #quirc alice</b><br><b>/kick #quirc carol Go away until you can be nice.</b><br>")
+
+		if cmd == "/topic":
+			self.helpDisplay.setText("")
+			self.helpDisplay.append("<h1><b>/topic</b> <i>NEW_TOPIC</i></h1>")
+			self.helpDisplay.append("Sets a channel's topic.<br>")
+			self.helpDisplay.append("<h2>Example:</h2> <b>/topic This is the new channel topic!</b><br>")
+
+		if cmd == "/whois":
+			self.helpDisplay.setText("")
+			self.helpDisplay.append("<h1><b>/whois</b> <i>USER [SERVER]</i></h1>")
+			self.helpDisplay.append("Requests data about a user from the IRC server.<br>")
+			self.helpDisplay.append("<h2>Examples:</h2> <b>/whois joe</b><br><b>/whois joe irc3.choopa.net</b><br>")
+
+		if cmd == "/invite":
+			self.helpDisplay.setText("")
+			self.helpDisplay.append("<h1><b>/invite</b> <i>USER [CHANNEL]</i></h1>")
+			self.helpDisplay.append("Invites a user to a channel; if CHANNEL is omitted, an invitation to the current channel is sent. CHANNEL must be specified if the server text display is open.<br>")
+			self.helpDisplay.append("<h2>Examples:</h2> <b>/invite bob_bot</b><br><b>/invite alice #quirc</b><br>")
+
+		if cmd == "/ison":
+			self.helpDisplay.setText("")
+			self.helpDisplay.append("<h1><b>/ison</b> <i>USER [USER] [...]</i></h1>")
+			self.helpDisplay.append("Checks if a user or users are online (connected to the IRC server).<br>")
+			self.helpDisplay.append("<h2>Examples:</h2> <b>/ison bob_bot</b><br><b>/ison alice bob carol daniel</b><br>")
+
+		if cmd == "/knock":
+			self.helpDisplay.setText("")
+			self.helpDisplay.append("<h1><b>/knock</b> <i>CHANNEL [MESSAGE]</i></h1>")
+			self.helpDisplay.append("Requests an invitation from the users of an invitation-only channel.<br>")
+			self.helpDisplay.append("<h2>Examples:</h2> <b>/knock #quirc</b><br><b>/knock #quirc Anybody home?</b><br>")
+
+		if cmd == "/ping":
+			self.helpDisplay.setText("")
+			self.helpDisplay.append("<h1><b>/ping</b> <i>USER</i></h1>")
+			self.helpDisplay.append("Sends a CTCP ping to a user or server, reporting the time taken.<br>")
+			self.helpDisplay.append("<h2>Example:</h2> <b>/ping bob_bot</b><br>")
+
+		if cmd == "/raw":
+			self.helpDisplay.setText("")
+			self.helpDisplay.append("<h1><b>/raw</b> <i>MESSAGE</i></h1>")
+			self.helpDisplay.append("Sends a raw, unprocessed message to the server. Used for supporting message and command types not supported by default in Quirc.<br>")
+			self.helpDisplay.append("<h2>Examples:</h2> <b>/raw PRIVMSG #quirc Hello!</b><br><b>/raw MODE #quirc +o bob</b><br>")
+
+		if cmd == "/connect":
+			self.helpDisplay.setText("")
+			self.helpDisplay.append("<h1><b>/connect</b> <i>HOST[:PORT]</i></h1>")
+			self.helpDisplay.append("Connects to an IRC server. If <i>PORT</i> is omitted, 6667 is assumed.<br>")
+			self.helpDisplay.append("<h1><b>/connect</b> <i>HOST PORT</i></h1>")
+			self.helpDisplay.append("Connects to an IRC server.<br>")
+			self.helpDisplay.append("<h2>Examples:</h2> <b>/connect irc.efnet.org</b><br><b>/connect chat.freenode.net:6667</b><br><b>/connect servercentral.il.us.quakenet.org 6667</b><br>")
+
+		if cmd == "/ssl":
+			self.helpDisplay.setText("")
+			self.helpDisplay.append("<h1><b>/ssl</b> <i>HOST PORT</i></h1>")
+			self.helpDisplay.append("Connects to an IRC server via SSL.<br>")
+			self.helpDisplay.append("<h2>Example:</h2> <b>/ssl chat.freenode.net 6697</b><br>")
+
+		if cmd == "Automatic Connect":
+			self.helpDisplay.setText("")
+			self.helpDisplay.append("When connected to an IRC server, click on <b>Quirc->Automatic Connect->To current server on startup</b> to automatically connect to the same IRC server the next time you start <b>Quirc</b>.<br>")
+			self.helpDisplay.append("To automatically re-join <i>all</i> the channels you're currently in next time you connect to a server, click on <b>Quirc->Automatic Connect->To current channel(s) on startup</b>.<br>")
+
+		if cmd == "Customize":
+			self.helpDisplay.setText("")
+			self.helpDisplay.append("The <b>Settings</b> menu contains two ways to customize <b>Quirc</b>: <b>Colors</b> allows you to customize what colors are used, and <b>Font</b> allows you to change the font.<br>")
+			self.helpDisplay.append("<b>Quirc</b> comes with the amazing <b>Fira Code</b> font by Nikita Prokopov.<br>https://github.com/tonsky/FiraCode<br>")
+
+			fl = """
+Copyright (c) 2014, Nikita Prokopov http://tonsky.me
+with Reserved Font Name Fira Code.
+
+Copyright (c) 2014, Mozilla Foundation https://mozilla.org/
+with Reserved Font Name Fira Sans.
+
+Copyright (c) 2014, Mozilla Foundation https://mozilla.org/
+with Reserved Font Name Fira Mono.
+
+Copyright (c) 2014, Telefonica S.A.
+
+This Font Software is licensed under the SIL Open Font License, Version 1.1.
+			"""
+			self.helpDisplay.append(fl)
+
+	def __init__(self,parent=None):
+		super(HelpDialog,self).__init__(parent)
+
+		self.setWindowTitle(f"Help")
+		self.setWindowIcon(QIcon(QUIRC_ICON_FILE))
+
+		cmdsBox = QGroupBox("")
+
+		self.cmdDisplay = QComboBox(self)
+		self.cmdDisplay.setFont(QUIRC_FONT_BOLD)
+		self.cmdDisplay.addItem("Introduction")
+		self.cmdDisplay.addItem("What is IRC?")
+		self.cmdDisplay.addItem("Color Key")
+		self.cmdDisplay.addItem("Automatic Connect")
+		self.cmdDisplay.addItem("Customize")
+		self.cmdDisplay.addItem("/connect")
+		self.cmdDisplay.addItem("/ssl")
+		self.cmdDisplay.addItem("/join")
+		self.cmdDisplay.addItem("/part")
+		self.cmdDisplay.addItem("/nick")
+		self.cmdDisplay.addItem("/me")
+		self.cmdDisplay.addItem("/msg")
+		self.cmdDisplay.addItem("/notice")
+		self.cmdDisplay.addItem("/quit")
+		self.cmdDisplay.addItem("/kick")
+		self.cmdDisplay.addItem("/topic")
+		self.cmdDisplay.addItem("/whois")
+		self.cmdDisplay.addItem("/invite")
+		self.cmdDisplay.addItem("/ison")
+		self.cmdDisplay.addItem("/knock")
+		self.cmdDisplay.addItem("/ping")
+		self.cmdDisplay.addItem("/raw")
+		self.cmdDisplay.activated.connect(self.cmdChange)
+
+
+		self.helpDisplay = QTextBrowser(self)
+		self.helpDisplay.setFont(QUIRC_FONT)
+
+		self.helpDisplay.setText(f"<h1>{APPLICATION} {VERSION} Help</h1>")
+		self.helpDisplay.append(f"Thank you for using <b>{APPLICATION}</b>!")
+		self.helpDisplay.append(f"Select a topic or command to read documentation about that topic or command.")
+		self.helpDisplay.append("All commands begin with a back slash (<b>/</b>), and take one or more arguments. Optional arguments are contained in <b>[</b> and <b>]</b>.")
+
+		textWidth = 500
+		textHeight = 400
+		self.helpDisplay.setMinimumSize(textWidth, textHeight)
+		self.helpDisplay.resize(textWidth, textHeight)
+
+		cbLayout = QVBoxLayout()
+		cbLayout.addWidget(self.cmdDisplay)
+		cbLayout.addWidget(self.helpDisplay)
+
+		cmdsBox.setLayout(cbLayout)
+
+
+		self.exit = QPushButton("Exit Help")
+		self.exit.setFont(QUIRC_FONT)
+
+		self.exit.clicked.connect(self.close)
+
+		finalLayout = QVBoxLayout()
+		finalLayout.addWidget(cmdsBox)
+		finalLayout.addWidget(self.exit)
+		self.setLayout(finalLayout)
 
 class BanUserDialog(QDialog):
 	global GUI
@@ -168,7 +517,7 @@ class BanUserDialog(QDialog):
 		super(BanUserDialog,self).__init__(parent)
 		self.target = target
 		self.setWindowTitle(f"{CHANNEL}")
-		self.setWindowIcon(QIcon(IRC_ICON_FILE))
+		self.setWindowIcon(QIcon(QUIRC_ICON_FILE))
 
 		hostmaskLayout = QHBoxLayout()
 		self.kd = QLabel("Hostmask")
@@ -209,7 +558,7 @@ class KickUserDialog(QDialog):
 		super(KickUserDialog,self).__init__(parent)
 		self.target = target
 		self.setWindowTitle(f"{CHANNEL}")
-		self.setWindowIcon(QIcon(IRC_ICON_FILE))
+		self.setWindowIcon(QIcon(QUIRC_ICON_FILE))
 
 		reasonLayout = QHBoxLayout()
 		self.kd = QLabel("Reason")
@@ -719,7 +1068,7 @@ class JoinChannelDialog(QDialog):
 		super(JoinChannelDialog,self).__init__(parent)
 		#QUIRC_FONT_BOLD = QFont(DISPLAY_FONT, DISPLAY_FONT_SIZE, QFont.Bold)
 		self.setWindowTitle("Join Channel")
-		self.setWindowIcon(QIcon(IRC_ICON_FILE))
+		self.setWindowIcon(QIcon(QUIRC_ICON_FILE))
 
 		chanLayout = QHBoxLayout()
 		self.cd = QLabel("Channel Name")
@@ -953,7 +1302,8 @@ class qpIRC_GUI(QMainWindow):
 		txt = self.ircInput.text()
 		self.ircInput.setText('')
 
-		USER_INPUT_HISTORY.insert(1, txt)
+		if USER_INPUT_HISTORY_POINTER == 0:
+			USER_INPUT_HISTORY.insert(1, txt)
 		if len(USER_INPUT_HISTORY) > USER_INPUT_HISTORY_MAX_SIZE:
 			USER_INPUT_HISTORY.pop()
 
@@ -982,7 +1332,8 @@ class qpIRC_GUI(QMainWindow):
 		c.show()
 
 	def menuHelpCommand(self):
-		QDesktopServices.openUrl(QUrl(f"file:///{COMMAND_HELP_FILE}"))
+		x = HelpDialog(parent=GUI)
+		x.show()
 
 	def menuDisconnect(self):
 		CLIENT.quit()
@@ -1034,10 +1385,21 @@ class qpIRC_GUI(QMainWindow):
 
 		saveFont()
 
+	def menu1459Command(self):
+		QDesktopServices.openUrl(QUrl("https://tools.ietf.org/html/rfc1459"))
+
+	def menu2812Command(self):
+		QDesktopServices.openUrl(QUrl("https://tools.ietf.org/html/rfc2812"))
+
+	def menuAbout(self):
+		x = AboutDialog(parent=self)
+		x.show()
 
 	def createUI(self):
 
 		menubar = self.menuBar()
+
+		menubar.setNativeMenuBar(False)
 
 		serverMenu = menubar.addMenu("Quirc")
 
@@ -1045,40 +1407,40 @@ class qpIRC_GUI(QMainWindow):
 		self.connectAct.triggered.connect(self.menuConnect)
 		serverMenu.addAction(self.connectAct)
 
-		self.disconnectAct = QAction(QIcon(DISCONNECT_ICON_FILE),"Disconnect from server",self)
+		self.disconnectAct = QAction(QIcon(CONNECT_ICON_FILE),"Disconnect from server",self)
 		self.disconnectAct.triggered.connect(self.menuDisconnect)
-		self.disconnectAct.setEnabled(False)
+		self.disconnectAct.setVisible(False)
 		serverMenu.addAction(self.disconnectAct)
 
 		serverMenu.addSeparator()
 
-		autoconMenu = serverMenu.addMenu("Auto-connect")
+		autoconMenu = serverMenu.addMenu(QIcon(AUTO_ICON_FILE),"Automatic Connect")
 
-		self.autoAct = QAction(QIcon(CONNECT_ICON_FILE),"To current server on startup",self)
+		self.autoAct = QAction(QIcon(BOOKMARK_ICON_FILE),"To current server on startup",self)
 		self.autoAct.triggered.connect(self.menuAuto)
 		self.autoAct.setEnabled(False)
 		autoconMenu.addAction(self.autoAct)
 
-		self.ajoinAct = QAction(QIcon(CONNECT_ICON_FILE),"To current channel(s) on startup",self)
+		self.ajoinAct = QAction(QIcon(BOOKMARK_ICON_FILE),"To current channel(s) on startup",self)
 		self.ajoinAct.triggered.connect(self.menuAutoJoin)
 		self.ajoinAct.setEnabled(False)
 		autoconMenu.addAction(self.ajoinAct)
 
 		serverMenu.addSeparator()
 
-		self.joinAct = QAction("Join a channel",self)
+		self.joinAct = QAction(QIcon(IRC_ICON_FILE),"Join a channel",self)
 		self.joinAct.triggered.connect(self.menuJoin)
 		self.joinAct.setEnabled(False)
 		serverMenu.addAction(self.joinAct)
 
-		self.awayAct = QAction("Set client as away",self)
+		self.awayAct = QAction(QIcon(IRC_ICON_FILE),"Set client as away",self)
 		self.awayAct.triggered.connect(self.menuAway)
 		self.awayAct.setEnabled(False)
 		serverMenu.addAction(self.awayAct)
 
 		serverMenu.addSeparator()
 
-		exitAct = QAction("Exit",self)
+		exitAct = QAction(QIcon(EXIT_ICON_FILE),"Exit",self)
 		exitAct.triggered.connect(app.quit)
 		serverMenu.addAction(exitAct)
 
@@ -1097,28 +1459,32 @@ class qpIRC_GUI(QMainWindow):
 		fontAct.triggered.connect(self.menuFont)
 		settingsMenu.addAction(fontAct)
 
-		settingsMenu.addSeparator()
-
-		# self.autoAct = QAction(QIcon(CONNECT_ICON_FILE),"Auto-connect to current server",self)
-		# self.autoAct.triggered.connect(self.menuAuto)
-		# self.autoAct.setEnabled(False)
-		# settingsMenu.addAction(self.autoAct)
-
-		# self.ajoinAct = QAction(QIcon(CONNECT_ICON_FILE),"Auto-join to current channel(s)",self)
-		# self.ajoinAct.triggered.connect(self.menuAutoJoin)
-		# self.ajoinAct.setEnabled(False)
-		# settingsMenu.addAction(self.ajoinAct)
-
 		helpMenu = menubar.addMenu("Help")
 
-		commandHelpAct = QAction(QIcon(INFO_ICON_FILE),"Command documentation",self)
+		aboutHelpAct = QAction(QIcon(QUIRC_ICON_FILE),"About",self)
+		aboutHelpAct.triggered.connect(self.menuAbout)
+		helpMenu.addAction(aboutHelpAct)
+
+		commandHelpAct = QAction(QIcon(SYSTEM_ICON_FILE),"Documentation",self)
 		commandHelpAct.triggered.connect(self.menuHelpCommand)
 		helpMenu.addAction(commandHelpAct)
+
+		helpMenu.addSeparator()
+
+		rfcMenu = helpMenu.addMenu(QIcon(FILE_ICON_FILE),"IRC Protocol")
+
+		rfc1459HelpAct = QAction(QIcon(WEB_ICON_FILE),"RFC 1459",self)
+		rfc1459HelpAct.triggered.connect(self.menu1459Command)
+		rfcMenu.addAction(rfc1459HelpAct)
+
+		rfc2812HelpAct = QAction(QIcon(WEB_ICON_FILE),"RFC 2812",self)
+		rfc2812HelpAct.triggered.connect(self.menu2812Command)
+		rfcMenu.addAction(rfc2812HelpAct)
 
 
 		self.setWindowTitle(f"{APPLICATION}")
 
-		self.setWindowIcon(QIcon(IRC_ICON_FILE))
+		self.setWindowIcon(QIcon(QUIRC_ICON_FILE))
 
 		# Status display
 		self.statusDisplay = QLabel(self)
@@ -1135,6 +1501,9 @@ class qpIRC_GUI(QMainWindow):
 
 		self.chatDisplay.anchorClicked.connect(self.linkClicked)
 
+		sp = [DATA_DIRECTORY,INSTALL_DIRECTORY]
+		self.chatDisplay.setSearchPaths(sp)
+
 		# Channel user / Server channel display
 		self.userList = QListWidget(self)
 		self.userList.setGeometry(QtCore.QRect(self.chatDisplay.width()+15, 10, 150, 425))
@@ -1146,7 +1515,7 @@ class qpIRC_GUI(QMainWindow):
 		# Channel list display
 		self.channelList = QComboBox(self)
 		self.channelList.setGeometry(3,self.chatDisplay.height()+15,50,25)
-		self.channelList.setFont(QUIRC_FONT_BOLD)
+		self.channelList.setFont(QUIRC_FONT)
 		self.channelList.activated.connect(self.channelChange)
 
 		# User input
@@ -1186,10 +1555,10 @@ class qpIRC_GUI(QMainWindow):
 			msgAct = menu.addAction(QIcon(CHAT_ICON_FILE),'Send message')
 			noticeAct = menu.addAction(QIcon(CHAT_ICON_FILE),'Send notice')
 			menu.addSeparator()
-			whoisAct = menu.addAction(QIcon(QUESTION_ICON_FILE),'WHOIS user')
+			whoisAct = menu.addAction(QIcon(WHOIS_ICON_FILE),'WHOIS user')
 			if CLIENT_IS_CHANNEL_OPERATOR:
 				kickAct = menu.addAction(QIcon(KICK_ICON_FILE),'Kick User')
-				banAct = menu.addAction(QIcon(KICK_ICON_FILE),'Ban User')
+				banAct = menu.addAction(QIcon(BAN_ICON_FILE),'Ban User')
 
 			menu.addSeparator()
 			urlAct = menu.addAction(QIcon(CLIPBOARD_ICON_FILE),'Copy channel URL to clipboard')
@@ -1302,6 +1671,8 @@ class qpIRC_ClientConnection(irc.IRCClient):
 		secs = round(secs,8)
 		display_message('SYSTEM','','',f"Ping reply from {pnick}: {secs} seconds",1)
 
+		return irc.IRCClient.pong(self, user, secs)
+
 	def register(self,nickname,hostname='foo',servername='bar'):
 		if SERVER_PASSWORD != '':
 			self.password = SERVER_PASSWORD
@@ -1313,9 +1684,9 @@ class qpIRC_ClientConnection(irc.IRCClient):
 		self.nickname = NICKNAME
 		self.sendLine("USER %s %s %s :%s" % (USERNAME, hostname, servername, REALNAME))
 
-		GUI.connectAct.setEnabled(False)
+		GUI.connectAct.setVisible(False)
 		GUI.disconnectAct.setText(f"Disconnect from {SERVER}:{PORT}")
-		GUI.disconnectAct.setEnabled(True)
+		GUI.disconnectAct.setVisible(True)
 		GUI.joinAct.setEnabled(True)
 		GUI.awayAct.setEnabled(True)
 		GUI.autoAct.setEnabled(True)
@@ -1341,8 +1712,16 @@ class qpIRC_ClientConnection(irc.IRCClient):
 		global PORT
 		global CHANNEL
 		global CLIENT_IS_AWAY
-		CLIENT_IS_CONNECTED = False
+		global CHANNEL_DATABASE
+		global SERVER_PAGE_BUFFER
+		CLIENT_IS_CONNECTED = False 
 		changedChannel(SERVER)
+		nc = []
+		for c in CHANNEL_DATABASE:
+			if c.Channel == SERVER:
+				c.Channel == ''
+				nc.append(c)
+		CHANNEL_DATABASE = nc
 		GUI.emptyChannel()
 		GUI.emptyUsers()
 		GUI.clearStatus()
@@ -1350,9 +1729,9 @@ class qpIRC_ClientConnection(irc.IRCClient):
 		CHANNEL = ''
 		SERVER = ''
 		PORT = ''
-		GUI.connectAct.setEnabled(True)
+		GUI.connectAct.setVisible(True)
 		GUI.disconnectAct.setText("Disconnect from server")
-		GUI.disconnectAct.setEnabled(False)
+		GUI.disconnectAct.setVisible(False)
 		GUI.joinAct.setEnabled(False)
 		GUI.awayAct.setEnabled(False)
 		GUI.autoAct.setEnabled(False)
@@ -1364,8 +1743,11 @@ class qpIRC_ClientConnection(irc.IRCClient):
 		return irc.IRCClient.connectionLost(self, reason)
 
 	def signedOn(self):
+		global AUTO_JOIN
 		display_message('SYSTEM','','',"Registered!",1)
 		GUI.addChannel(SERVER)
+		if LOADED_USER_INFO_FROM_FILE:
+			CLIENT.setNick(NICKNAME)
 		global CONNECT_ON_JOIN_CHANNEL
 		global CONNECT_ON_JOIN_CHANNEL_KEY
 		if CONNECT_ON_JOIN_CHANNEL != '':
@@ -1379,8 +1761,10 @@ class qpIRC_ClientConnection(irc.IRCClient):
 		# Auto-join channels
 		for c in AUTO_JOIN:
 			CLIENT.join(c)
+		AUTO_JOIN = []
 		# request full NAMES format
 		self.sendLine("PROTOCTL UHNAMES")
+
 
 	def joined(self, channel):
 		global CHANNEL
@@ -1519,7 +1903,7 @@ class qpIRC_ClientConnection(irc.IRCClient):
 			if set:
 				for u in args:
 					# u + operator
-					text = f"{pnick} made {u} a channel operator"
+					text = f"{pnick} made {u} a {channel} channel operator"
 			else:
 				for u in args:
 					# u - operator
@@ -1734,8 +2118,6 @@ def changedChannel(channel):
 	if channel != SERVER: refreshUserlist()
 	for c in getChat(channel):
 		display_message(c.Type,c.Channel,c.User,c.Message,0)
-		# if c.Channel == channel:
-		# 	display_message(c.Type,c.Channel,c.User,c.Message,0)
 	if channel == SERVER:
 		GUI.emptyUsers()
 		cl = getChannelList()
@@ -1757,6 +2139,7 @@ def ssl_to_irc(host,port):
 	global SERVER
 	global PORT
 	global CONNECTED_VIA_SSL
+	global CONNECTED_ONCE
 
 	if CLIENT_IS_CONNECTED:
 		CLIENT.quit()
@@ -1775,6 +2158,7 @@ def connect_to_irc(host,port):
 	global CLIENT_IS_CONNECTED
 	global SERVER
 	global PORT
+	global CONNECTED_ONCE
 
 	if CLIENT_IS_CONNECTED:
 		CLIENT.quit()
@@ -1790,6 +2174,7 @@ def refreshUserlist():
 	global CHANNEL_USER_LIST
 	global CHANNEL
 	global CLIENT
+	if CHANNEL == '': return
 	CHANNEL_USER_LIST = []
 	CLIENT.sendLine(f"NAMES {CHANNEL}")
 
@@ -1916,7 +2301,7 @@ def handleCommands(text):
 			if CLIENT_IS_CONNECTED:
 				CLIENT.msg(target,msg)
 				if TURN_URLS_INTO_LINKS: msg = format_links(msg)
-				display_message('OUTPRIVATE',target,NICKNAME,msg,1)
+				display_message('OUTPRIVATE',target,f"{NICKNAME}->{target}",msg,1)
 			else:
 				display_message('ERROR','','',"Can't send message (not connected to a server)",1)
 			return True
@@ -1937,7 +2322,7 @@ def handleCommands(text):
 			if CLIENT_IS_CONNECTED:
 				CLIENT.notice(target,msg)
 				if TURN_URLS_INTO_LINKS: msg = format_links(msg)
-				display_message('OUTNOTICE',target,NICKNAME,msg,1)
+				display_message('OUTNOTICE',target,f"{NICKNAME}->{target}",msg,1)
 			else:
 				display_message('ERROR','','',"Can't send notice (not connected to a server)",1)
 			return True
@@ -2006,6 +2391,10 @@ def handleCommands(text):
 		return True
 
 	if len(tokens) < 2 and tokens[0].lower() == '/topic':
+		display_message('SYSTEM','','',"USAGE: /topic CHANNEL NEW_TOPIC",1)
+		return True
+
+	if len(tokens) == 2 and tokens[0].lower() == '/topic':
 		display_message('SYSTEM','','',"USAGE: /topic CHANNEL NEW_TOPIC",1)
 		return True
 
@@ -2159,10 +2548,66 @@ def handleCommands(text):
 		display_message('SYSTEM','','',"USAGE: /ping USER",1)
 		return True
 
+	# |=========|
+	# | CONNECT |
+	# |=========|
+
+	if len(tokens) == 2 and tokens[0].lower() == '/connect':
+		target = tokens[1]
+		x = target.split(':')
+		if len(x)==2:
+			serv = x[0]
+			port = x[1]
+			if port.isalpha():
+				display_message('ERROR','','',f"Can't use {port} as a port number",1)
+				return True
+			connect_to_irc(serv,port)
+		else:
+			serv = target
+			connect_to_irc(target,6667)
+		return True
+
+	if len(tokens) == 3 and tokens[0].lower() == '/connect':
+		serv = tokens[1]
+		port = tokens[2]
+		if port.isalpha():
+			display_message('ERROR','','',f"Can't use {port} as a port number",1)
+			return True
+		connect_to_irc(serv,port)
+		return True
+
+	if len(tokens) < 2 and tokens[0].lower() == '/connect':
+		display_message('SYSTEM','','',"USAGE: /connect HOST[:PORT] (if PORT is omitted, 6667 is assumed) -or- /connect HOST PORT",1)
+		return True
+
+	if len(tokens) > 3 and tokens[0].lower() == '/connect':
+		display_message('SYSTEM','','',"USAGE: /connect HOST[:PORT] (if PORT is omitted, 6667 is assumed) -or- /connect HOST PORT",1)
+		return True
+
+	# |=====|
+	# | SSL |
+	# |=====|
+
+	if len(tokens) == 3 and tokens[0].lower() == '/ssl':
+		serv = tokens[1]
+		port = tokens[2]
+		if port.isalpha():
+			display_message('ERROR','','',f"Can't use {port} as a port number",1)
+			return True
+		ssl_to_irc(serv,port)
+		return True
+
+	if len(tokens) != 3 and tokens[0].lower() == '/ssl':
+		display_message('SYSTEM','','',"USAGE: /ssl HOST PORT",1)
+		return True
+
+
 def handleInput(text):
 	global GUI
 	global CLIENT
 	global CHANNEL
+
+	USER_INPUT_HISTORY_POINTER = 0
 
 	if len(text)>=1 and text[0] == '/':
 		if not handleCommands(text):
@@ -2260,7 +2705,6 @@ def pad_nick(nick,size):
 
 def display_message(mtype,channel,user,message,store):
 	global GUI
-	global MESSAGE_TEMPLATE
 	global CHAT_TEMPLATE
 	global CHANNEL
 	if mtype.lower() == 'public':
@@ -2269,56 +2713,65 @@ def display_message(mtype,channel,user,message,store):
 		response = response.replace('!USER!',f"<b>{padded_user}</b>")
 		response = response.replace('!TEXT!',message)
 	elif mtype.lower() == 'private':
-		padded_user = pad_nick(user,MAXIMUM_NICK_DISPLAY_SIZE)
-		response = PRIVATE_TEMPLATE.replace('!COLOR!',PRIVATE_MESSAGE_COLOR)
-		response = response.replace('!USER!',f"<b>{padded_user}</b>")
+		response = ICON_NAME_TEMPLATE.replace('!COLOR!',PRIVATE_MESSAGE_COLOR)
+		response = response.replace('!ICON!',PRIVATE_ICON)
+		response = response.replace('!USER!',f"<b><u>{user}</u></b>")
 		response = response.replace('!TEXT!',message)
 	elif mtype.lower() == 'outprivate':
-		padded_user = pad_nick(f"{user}->{channel}",MAXIMUM_NICK_DISPLAY_SIZE)
-		response = PRIVATE_TEMPLATE.replace('!COLOR!',PRIVATE_MESSAGE_COLOR)
-		response = response.replace('!USER!',f"<b>{padded_user}</b>")
+		response = ICON_NAME_TEMPLATE.replace('!COLOR!',PRIVATE_MESSAGE_COLOR)
+		response = response.replace('!ICON!',PRIVATE_ICON)
+		response = response.replace('!USER!',f"<b><u>{user}</u></b>")
 		response = response.replace('!TEXT!',message)
 	elif mtype.lower() == 'outnotice':
-		padded_user = pad_nick(f"{user}->{channel}",MAXIMUM_NICK_DISPLAY_SIZE)
-		response = PRIVATE_TEMPLATE.replace('!COLOR!',NOTICE_MESSAGE_COLOR)
-		response = response.replace('!USER!',f"<b>{padded_user}</b>")
+		response = ICON_NAME_TEMPLATE.replace('!COLOR!',NOTICE_MESSAGE_COLOR)
+		response = response.replace('!ICON!',NOTICE_ICON)
+		response = response.replace('!USER!',f"<b><u>{user}</u></b>")
 		response = response.replace('!TEXT!',message)
 	elif mtype.lower() == 'notice':
-		padded_user = pad_nick(user,MAXIMUM_NICK_DISPLAY_SIZE)
-		response = PRIVATE_TEMPLATE.replace('!COLOR!',NOTICE_MESSAGE_COLOR)
-		response = response.replace('!USER!',f"<b>{padded_user}</b>")
+		response = ICON_NAME_TEMPLATE.replace('!COLOR!',NOTICE_MESSAGE_COLOR)
+		response = response.replace('!ICON!',NOTICE_ICON)
+		response = response.replace('!USER!',f"<b><u>{user}</u></b>")
 		response = response.replace('!TEXT!',message)
 	elif mtype.lower() == 'action':
-		response = MESSAGE_TEMPLATE.replace('!COLOR!',ACTION_MESSAGE_COLOR)
-		response = response.replace('!TEXT!',f"{user} {message}")
+		response = ICON_TEMPLATE.replace('!COLOR!',ACTION_MESSAGE_COLOR)
+		response = response.replace('!ICON!',ACTION_ICON)
+		response = response.replace('!TEXT!',f"<b>{user} {message}</b>")
 	elif mtype.lower() == 'system':
-		response = MESSAGE_TEMPLATE.replace('!COLOR!',SYSTEM_MESSAGE_COLOR)
-		response = response.replace('!TEXT!',message)
+		response = ICON_TEMPLATE.replace('!COLOR!',SYSTEM_MESSAGE_COLOR)
+		response = response.replace('!ICON!',SYSTEM_ICON)
+		response = response.replace('!TEXT!',f"<b>{message}</b>")
 	elif mtype.lower() == 'join':
-		response = MESSAGE_TEMPLATE.replace('!COLOR!',SYSTEM_MESSAGE_COLOR)
-		response = response.replace('!TEXT!',message)
+		response = ICON_TEMPLATE.replace('!COLOR!',SYSTEM_MESSAGE_COLOR)
+		response = response.replace('!ICON!',IRC_ICON)
+		response = response.replace('!TEXT!',f"<b>{message}</b>")
 	elif mtype.lower() == 'part':
-		response = MESSAGE_TEMPLATE.replace('!COLOR!',SYSTEM_MESSAGE_COLOR)
-		response = response.replace('!TEXT!',message)
+		response = ICON_TEMPLATE.replace('!COLOR!',SYSTEM_MESSAGE_COLOR)
+		response = response.replace('!ICON!',IRC_ICON)
+		response = response.replace('!TEXT!',f"<b>{message}</b>")
 	elif mtype.lower() == 'topic':
-		response = MESSAGE_TEMPLATE.replace('!COLOR!',SYSTEM_MESSAGE_COLOR)
-		response = response.replace('!TEXT!',message)
+		response = ICON_TEMPLATE.replace('!COLOR!',SYSTEM_MESSAGE_COLOR)
+		response = response.replace('!ICON!',IRC_ICON)
+		response = response.replace('!TEXT!',f"<b>{message}</b>")
 	elif mtype.lower() == 'kick':
-		response = MESSAGE_TEMPLATE.replace('!COLOR!',SYSTEM_MESSAGE_COLOR)
-		response = response.replace('!TEXT!',message)
+		response = ICON_TEMPLATE.replace('!COLOR!',SYSTEM_MESSAGE_COLOR)
+		response = response.replace('!ICON!',IRC_ICON)
+		response = response.replace('!TEXT!',f"<b>{message}</b>")
 	elif mtype.lower() == 'mode':
-		response = MESSAGE_TEMPLATE.replace('!COLOR!',SYSTEM_MESSAGE_COLOR)
-		response = response.replace('!TEXT!',message)
+		response = ICON_TEMPLATE.replace('!COLOR!',SYSTEM_MESSAGE_COLOR)
+		response = response.replace('!ICON!',IRC_ICON)
+		response = response.replace('!TEXT!',f"<b>{message}</b>")
 	elif mtype.lower() == 'usermode':
-		response = MESSAGE_TEMPLATE.replace('!COLOR!',SYSTEM_MESSAGE_COLOR)
-		response = response.replace('!TEXT!',message)
+		response = ICON_TEMPLATE.replace('!COLOR!',SYSTEM_MESSAGE_COLOR)
+		response = response.replace('!ICON!',IRC_ICON)
+		response = response.replace('!TEXT!',f"<b>{message}</b>")
 	elif mtype.lower() == 'ascii':
 		response = f"<pre>{message}</pre>"
 	elif mtype.lower() == 'raw':
 		response = f"{message}"
 	elif mtype.lower() == 'error':
-		response = ERROR_TEMPLATE.replace('!COLOR!',ERROR_MESSAGE_COLOR)
-		response = response.replace('!TEXT!',message)
+		response = ICON_TEMPLATE.replace('!COLOR!',ERROR_MESSAGE_COLOR)
+		response = response.replace('!ICON!',ERROR_ICON)
+		response = response.replace('!TEXT!',f"<b>{message}</b>")
 	else:
 		return
 	doPrint = True
@@ -2326,7 +2779,28 @@ def display_message(mtype,channel,user,message,store):
 	if doPrint:
 		GUI.writeText(response)
 	if store == 1:
-		# store message
+
+		if mtype.lower() == 'public' or mtype.lower() == 'action':
+			m = Chat(mtype,CHANNEL,user,message)
+			storeChat(m)
+			return
+
+		if mtype.lower() == 'private' or mtype.lower() == 'outprivate':
+			if CHANNEL != '':
+				m = Chat(mtype,CHANNEL,user,message)
+				storeChat(m)
+			m = Chat(mtype,SERVER,user,message)
+			storeChat(m)
+			return
+
+		if mtype.lower() == 'notice' or mtype.lower() == 'outnotice':
+			if CHANNEL != '':
+				m = Chat(mtype,CHANNEL,user,message)
+				storeChat(m)
+			m = Chat(mtype,SERVER,user,message)
+			storeChat(m)
+			return
+
 		if channel == '' or channel == NICKNAME or channel == '*':
 			m = Chat(mtype,SERVER,user,message)
 			storeChat(m)
@@ -2379,11 +2853,32 @@ def loadFont():
 			QUIRC_FONT_BOLD = QUIRC_FONT
 			QUIRC_FONT_BOLD.setBold(True)
 
+def displayBanner():
+	banner = f"""<a href=\"https://github.com/danhetrick/quirc\">
+<img src=\"{QUIRC_LOGO}\"></a><br>
+<i>{DESCRIPTION}</i><br>
+	"""
+
+	display_message('RAW','','',f"{banner}",1)
+	display_message('RAW','','',"Connect to IRC with the <b>/connect</b> or <b>/ssl</b> commands, or select a server from the <b>Quirc</b> menu by clicking on \"Connect to server\"!",1)
+
 # ================
 # | MAIN PROGRAM |
 # ================
 
 if __name__ == '__main__':
+
+	# Load user information if present
+	if os.path.isfile(USER_INFORMATION_FILE):
+		with open(USER_INFORMATION_FILE, "r") as read_user:
+			data = json.load(read_user)
+			if len(data) != 3:
+				print(f"User data in {USER_INFORMATION_FILE} is malformed")
+			else:
+				NICKNAME = data[0]
+				REALNAME = data[1]
+				USERNAME = data[2]
+				LOADED_USER_INFO_FROM_FILE = True
 
 	loadFont()
 
@@ -2391,8 +2886,7 @@ if __name__ == '__main__':
 	global GUI
 	GUI = qpIRC_GUI()
 
-	display_message('ASCII','','',LOGO,1)
-	display_message('RAW','','',f"<b>{APPLICATION} {VERSION}</b><br><i>{DESCRIPTION}</i>",1)
+	displayBanner()
 
 	if os.path.isfile(COLOR_INFORMATION_FILE):
 		with open(COLOR_INFORMATION_FILE, "r") as read_color:
@@ -2410,18 +2904,6 @@ if __name__ == '__main__':
 	if os.path.isfile(CHANNEL_INFORMATION_FILE):
 		with open(CHANNEL_INFORMATION_FILE, "r") as read_chans:
 			AUTO_JOIN = json.load(read_chans)
-
-	# Load user information if present
-	if os.path.isfile(USER_INFORMATION_FILE):
-		with open(USER_INFORMATION_FILE, "r") as read_user:
-			data = json.load(read_user)
-			if len(data) != 3:
-				display_message('ERROR','','',f"User data in {USER_INFORMATION_FILE} is malformed",1)
-			else:
-				NICKNAME = data[0]
-				REALNAME = data[1]
-				USERNAME = data[2]
-				display_message('SYSTEM','','',f"Saved user settings loaded",1)
 
 	# Load server information if present
 	if os.path.isfile(SERVER_INFORMATION_FILE):

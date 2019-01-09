@@ -1,5 +1,5 @@
 # Quirc
-A Python3/Qt5 IRC client. The latest version is **0.026627**.
+A Python3/Qt5 IRC client. The latest version is **0.02670**.
 
 ## Requirements
 **Quirc** requires Python 3, Twisted, and Qt5. Installing the requirements is as easy and opening a terminal and executing:

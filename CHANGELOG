@@ -1,3 +1,19 @@
+Version 0.02670
+	* New graphical logo, displayed at startup
+	* New command help dialog
+	* Moved some menu items
+	* Quirc won't use the native menu format of its host operating system
+	* Removed commands.txt from installation
+	* New application icon
+	* Fixed a bug with stored nicks not being used on auto-connect
+	* Fixed a bug with outgoing private messages and notices not being displayed
+	* Fixed a bug with private messages and notices being displayed incorrectly
+	* Added "Fira Code" and "Fira Code Bold" fonts as the default fonts
+	* New text display system
+	* All new icons
+	* Added /connect command
+	* Added /ssl command
+
 Version 0.02667
 	* Channel chat is correctly saved and displayed on channel change
 	* Fixed a bug where some channel or user modes would not be displayed
