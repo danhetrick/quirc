@@ -1,3 +1,19 @@
+Version 0.03000
+	* All new, re-factored client
+	* New MDI interface (reminicent of mIRC)
+
+Version 0.02674
+	* Changed messages to left align text rather than center
+	* Fixed a bug where old nick was used on reconnection
+	* Added /reconnect command
+	* Added /away command
+	* Added /back command
+	* Changed message template to more accurately align display text
+	* Added channel mode dialog
+	* Added topic dialog
+	* Changed context menu to display all options, whether the user is a chan op or not
+	* Expanded options in color selection dialog
+
 Version 0.02670
 	* New graphical logo, displayed at startup
 	* New command help dialog
