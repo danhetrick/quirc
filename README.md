@@ -1,5 +1,5 @@
 # Quirc
-A Python3/Qt5 IRC client. The latest version is **0.03000**.
+A Python3/Qt5 IRC client. The latest version is **0.03001**.
 
 **Quirc** is being actively developed.
 

@@ -13,6 +13,12 @@ from Quirc.Commands import *
 
 class Window(QWidget):
 
+	def reloadColors(self):
+		self.Colors = loadColorSettings(COLOR_FILE)
+
+	def setColors(self,obj):
+		self.Colors = obj
+
 	def __init__(self,channel,client,master,subwindow,parent=None):
 		super(Window,self).__init__(parent)
 		self.Channel = channel
@@ -21,6 +27,10 @@ class Window(QWidget):
 		self.SUBWINDOW = subwindow
 		self.Nick = ''
 		self.Users = []
+		self.loadSettings()
+
+		self.Colors = loadColorSettings(COLOR_FILE)
+
 		self.createUI()
 
 	def writeText(self,text):
@@ -149,6 +159,10 @@ class Window(QWidget):
 		self.ircInput.setFont(QUIRC_FONT)
 		self.userList.setFont(QUIRC_FONT_BOLD)
 
+		self.chatDisplay.setStyleSheet(f"background-color: \"{self.Colors.Background}\"; color:  \"{self.Colors.Normal}\";")
+		self.ircInput.setStyleSheet(f"background-color: \"{self.Colors.Background}\"; color:  \"{self.Colors.Normal}\";")
+		self.userList.setStyleSheet(f"background-color: \"{self.Colors.Background}\"; color:  \"{self.Colors.Normal}\";")
+
 		self.setGeometry(QtCore.QRect(10, 10, 640, 480))
 
 	def linkClicked(self,url):
@@ -169,10 +183,18 @@ class Window(QWidget):
 		if not channelHandler(txt,self.CLIENT,self,self.GUI):
 			self.CLIENT.msg(self.Channel,txt,length=MAXIMUM_IRC_MESSAGE_LENGTH)
 			# Inject links
-			txt = format_links(txt)
-			d = nolink_chat_message(SELF_NAME_COLOR,self.CLIENT.nickname,txt)
+			if self.linkURL: txt = format_links(txt)
+			d = nolink_chat_message(self.Colors.Self,self.CLIENT.nickname,txt)
 			self.chatDisplay.append(d)
 			self.chatDisplay.moveCursor(QTextCursor.End)
+
+	def loadSettings(self):
+		if os.path.isfile(WINDOW_INFORMATION_FILE):
+			with open(WINDOW_INFORMATION_FILE, "r") as read_win:
+				data = json.load(read_win)
+				self.linkURL = data["linkURL"]
+		else:
+			self.linkURL = True
 
 
 	def resizeEvent(self,resizeEvent):

@@ -1,6 +1,7 @@
 
 import sys
 import os
+import json
 
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
@@ -14,6 +15,7 @@ NOTIFICATION_MESSAGE_COLOR = "#708090"
 CHANNEL_MESSAGE_COLOR = "#FFA500"
 NOTICE_MESSAGE_COLOR = "#800080"
 NORMAL_TEXT_COLOR = "#000000"
+BACKGROUND_COLOR = "#FFFFFF"
 
 COLOR_URL_LINKS = False
 URL_LINK_COLOR = "#0000FF"
@@ -27,6 +29,19 @@ ICON_DIRECTORY = os.path.join(RESOURCE_DIRECTORY, "icons")
 FONT_DIRECTORY = os.path.join(RESOURCE_DIRECTORY, "fonts")
 IMAGE_DIRECTORY = os.path.join(RESOURCE_DIRECTORY, "images")
 CONFIG_DIRECTORY = os.path.join(INSTALL_DIRECTORY, "config")
+
+class QuircColors(object):
+	def __init__(self):
+		self.User = USER_NAME_COLOR
+		self.Self = SELF_NAME_COLOR
+		self.Action = ACTION_MESSAGE_COLOR
+		self.Notify = NOTIFICATION_MESSAGE_COLOR
+		self.Channel = CHANNEL_MESSAGE_COLOR
+		self.Notice = NOTICE_MESSAGE_COLOR
+		self.Normal = NORMAL_TEXT_COLOR
+		self.Background = BACKGROUND_COLOR
+
+COLOR_FILE = os.path.join(CONFIG_DIRECTORY, "colors.json")
 
 BACKGROUND = os.path.join(IMAGE_DIRECTORY, "background.png")
 LOGO = os.path.join(IMAGE_DIRECTORY, "quirc.png")
@@ -42,6 +57,8 @@ HASH_ICON = os.path.join(ICON_DIRECTORY, "hash.png")
 CONNECT_ICON = os.path.join(ICON_DIRECTORY, "connect.png")
 EXIT_ICON = os.path.join(ICON_DIRECTORY, "exit.png")
 DISCONNECT_ICON = os.path.join(ICON_DIRECTORY, "disconnect.png")
+COLOR_ICON = os.path.join(ICON_DIRECTORY, "color.png")
+RESTART_ICON = os.path.join(ICON_DIRECTORY, "restart.png")
 
 MSG_CHAT = "chat.png"
 MSG_USER = "user.png"
@@ -56,6 +73,7 @@ TITLE_FONT_SIZE = 10
 
 STORED_SERVER_FILE = os.path.join(RESOURCE_DIRECTORY, "servers.txt")
 USER_INFORMATION_FILE = os.path.join(CONFIG_DIRECTORY, "user.json")
+WINDOW_INFORMATION_FILE = os.path.join(CONFIG_DIRECTORY, "window.json")
 
 id = QFontDatabase.addApplicationFont(FIRACODE_FONT_LOCATION)
 _fontstr = QFontDatabase.applicationFontFamilies(id)[0]
@@ -78,10 +96,10 @@ T_COLOR = "!COLOR!"
 CHAT_TEMPLATE = """
 <table style="width: 100%;" border="0">
   <tbody>
-    <tr>
-      <td style="width: 150px; height: 20px; text-align: right; vertical-align: top;"><font color="!COLOR!">!USER!</font></td>
-      <td style="text-align: left; vertical-align: top;">&nbsp;<font color="!NORMAL!">!MESSAGE!</font></td>
-    </tr>
+	<tr>
+	  <td style="width: 150px; height: 20px; text-align: right; vertical-align: top;"><font color="!COLOR!">!USER!</font></td>
+	  <td style="text-align: left; vertical-align: top;">&nbsp;!MESSAGE!</td>
+	</tr>
   </tbody>
 </table>
 """
@@ -89,11 +107,11 @@ CHAT_TEMPLATE = """
 CHAT_TIMESTAMP_TEMPLATE = """
 <table style="width: 100%;" border="0">
   <tbody>
-    <tr>
-      <td style="width: 75px; height: 20px; text-align: center; vertical-align: top;">!TIME!</td>
-      <td style="width: 150px; text-align: right; vertical-align: top;"><font color="!COLOR!">!USER!</font></td>
-      <td style="text-align: left; vertical-align: top;">&nbsp;<font color="!NORMAL!">!MESSAGE!</font></td>
-    </tr>
+	<tr>
+	  <td style="width: 75px; height: 20px; text-align: center; vertical-align: top;">!TIME!</td>
+	  <td style="width: 150px; text-align: right; vertical-align: top;"><font color="!COLOR!">!USER!</font></td>
+	  <td style="text-align: left; vertical-align: top;">&nbsp;!MESSAGE!</td>
+	</tr>
   </tbody>
 </table>
 """
@@ -101,11 +119,11 @@ CHAT_TIMESTAMP_TEMPLATE = """
 CHAT_ICON_TEMPLATE = """
 <table style="width: 100%;" border="0">
   <tbody>
-    <tr>
-      <td style="width: 20px; height: 20px; text-align: center; vertical-align: top;"><img src="!I!"></td>
-      <td style="text-align: right; vertical-align: top;"><font color="!COLOR!">&nbsp;!USER!</font></td>
-      <td style="text-align: left; vertical-align: top;">&nbsp;<font color="!NORMAL!">!MESSAGE!</font></td>
-    </tr>
+	<tr>
+	  <td style="width: 20px; height: 20px; text-align: center; vertical-align: top;"><img src="!I!"></td>
+	  <td style="text-align: right; vertical-align: top;"><font color="!COLOR!">&nbsp;!USER!</font></td>
+	  <td style="text-align: left; vertical-align: top;">&nbsp;!MESSAGE!</td>
+	</tr>
   </tbody>
 </table>
 """
@@ -113,12 +131,12 @@ CHAT_ICON_TEMPLATE = """
 CHAT_ICON_TIMESTAMP_TEMPLATE = """
 <table style="width: 100%;" border="0">
   <tbody>
-    <tr>
-      <td style="width: 75px; height: 20px; text-align: center; vertical-align: top;">!TIME!</td>
-      <td style="width: 20px; height: 20px; text-align: center; vertical-align: top;"><img src="!I!"></td>
-      <td style="text-align: right; vertical-align: top;"><font color="!COLOR!">&nbsp;!USER!</font></td>
-      <td style="text-align: left; vertical-align: top;">&nbsp;<font color="!NORMAL!">!MESSAGE!</font></td>
-    </tr>
+	<tr>
+	  <td style="width: 75px; height: 20px; text-align: center; vertical-align: top;">!TIME!</td>
+	  <td style="width: 20px; height: 20px; text-align: center; vertical-align: top;"><img src="!I!"></td>
+	  <td style="text-align: right; vertical-align: top;"><font color="!COLOR!">&nbsp;!USER!</font></td>
+	  <td style="text-align: left; vertical-align: top;">&nbsp;!MESSAGE!</td>
+	</tr>
   </tbody>
 </table>
 """
@@ -126,22 +144,22 @@ CHAT_ICON_TIMESTAMP_TEMPLATE = """
 MESSAGE_ICON_TEMPLATE = """
 <table style="width: 100%;" border="0">
   <tbody>
-    <tr>
-      <td style="width: 20px; height: 20px; text-align: center; vertical-align: top;"><img src="!I!"></td>
-      <td style="text-align: left; vertical-align: top;">&nbsp;<font color="!COLOR!"><b>!MESSAGE!</b></font></td>
-    </tr>
+	<tr>
+	  <td style="width: 20px; height: 20px; text-align: center; vertical-align: top;"><img src="!I!"></td>
+	  <td style="text-align: left; vertical-align: top;">&nbsp;<font color="!COLOR!"><b>!MESSAGE!</b></font></td>
+	</tr>
   </tbody>
 </table>
 """
 
 MESSAGE_ICON_TIMESTAMP_TEMPLATE = """
 <table style="width: 100%;" border="0">
-      <tbody>
-        <tr>
-          <td style="width: 75px; height: 20px; text-align: center; vertical-align: top;">!TIME!</td>
-          <td style="width: 20px; height: 20px; text-align: center; vertical-align: top;"><img src="!I!"></td>
-          <td style="text-align: left; vertical-align: top;">&nbsp;<font color="!COLOR!"><b>!MESSAGE!</b></font></td>
-        </tr>
-      </tbody>
-    </table>
+	  <tbody>
+		<tr>
+		  <td style="width: 75px; height: 20px; text-align: center; vertical-align: top;">!TIME!</td>
+		  <td style="width: 20px; height: 20px; text-align: center; vertical-align: top;"><img src="!I!"></td>
+		  <td style="text-align: left; vertical-align: top;">&nbsp;<font color="!COLOR!"><b>!MESSAGE!</b></font></td>
+		</tr>
+	  </tbody>
+	</table>
 """

@@ -1,5 +1,8 @@
+#
+# Quirc IRC Client
+#
 
-
+# Version 0.03001
 
 import sys
 import os
@@ -42,8 +45,6 @@ SERVER = 'localhost'
 PORT = 6667
 SERVER_PASSWORD = ''
 
-
-
 class quirc_ClientConnection(irc.IRCClient):
 
 	global GUI
@@ -57,6 +58,26 @@ class quirc_ClientConnection(irc.IRCClient):
 
 	def __init__(self):
 		self.CONNECTED = False
+		self.Colors = loadColorSettings(COLOR_FILE)
+		self.loadSettings()
+
+	def loadSettings(self):
+		if os.path.isfile(WINDOW_INFORMATION_FILE):
+			with open(WINDOW_INFORMATION_FILE, "r") as read_win:
+				data = json.load(read_win)
+				self.linkUsers = data["linkUsers"]
+				self.linkURL = data["linkURL"]
+		else:
+			winfo = {
+				"initialWidth": 640,
+				"initialHeight": 480,
+				"linkUsers": True,
+				"linkURL": True
+			}
+			with open(WINDOW_INFORMATION_FILE, "w") as write_data:
+				json.dump(winfo, write_data)
+			self.linkUsers = True
+			self.linkURL = True
 
 	def register(self,nickname,hostname='foo',servername='bar'):
 		if SERVER_PASSWORD != '':
@@ -65,11 +86,11 @@ class quirc_ClientConnection(irc.IRCClient):
 		self.username = USERNAME
 		self.realname = REALNAME
 		self.sendLine("USER %s %s %s :%s" % (USERNAME, hostname, servername, REALNAME))
-		#return irc.IRCClient.register(self,nickname,hostname='foo',servername='bar')
 
 	def connectionMade(self):
 		GUI.connected(self)
-		d = notification_message(NOTIFICATION_MESSAGE_COLOR,MSG_STAR,f"Connected to {SERVER}:{PORT}")
+		d = notification_message(self.Colors.Notify,MSG_STAR,f"Connected to {SERVER}:{PORT}")
+		#d = notification_message(NOTIFICATION_MESSAGE_COLOR,MSG_STAR,f"Connected to {SERVER}:{PORT}")
 		GUI.writeToServer(d)
 		GUI.actConnect.setEnabled(False)
 		GUI.actDisconnect.setEnabled(True)
@@ -78,7 +99,7 @@ class quirc_ClientConnection(irc.IRCClient):
 		return irc.IRCClient.connectionMade(self)
 
 	def connectionLost(self, reason):
-		d = notification_message(NOTIFICATION_MESSAGE_COLOR,MSG_STAR,f"Connection to server lost")
+		d = notification_message(self.Colors.Notify,MSG_STAR,f"Connection to server lost")
 		GUI.writeToServer(d)
 		self.CONNECTED = False
 		GUI.actConnect.setEnabled(True)
@@ -88,7 +109,7 @@ class quirc_ClientConnection(irc.IRCClient):
 		return irc.IRCClient.connectionLost(self, reason)
 
 	def signedOn(self):
-		d = notification_message(NOTIFICATION_MESSAGE_COLOR,MSG_STAR,f"Registered!")
+		d = notification_message(self.Colors.Notify,MSG_STAR,f"Registered!")
 		GUI.writeToServer(d)
 		self.CONNECTED = True
 		# request full NAMES format
@@ -97,7 +118,7 @@ class quirc_ClientConnection(irc.IRCClient):
 
 
 	def joined(self, channel):
-		d = notification_message(CHANNEL_MESSAGE_COLOR,MSG_HASH,f"Joined {channel}")
+		d = notification_message(self.Colors.Channel,MSG_HASH,f"Joined {channel}")
 		GUI.writeToChannel(channel,d)
 		self.sendLine(f"NAMES {channel}")
 
@@ -106,16 +127,19 @@ class quirc_ClientConnection(irc.IRCClient):
 		phostmask = user.split('!')[1]
 
 		# Inject links into chat
-		msg = format_links(msg)
+		if self.linkURL: msg = format_links(msg)
 
 		if target != self.nickname:
 			# public message
-			d = chat_message(USER_NAME_COLOR,pnick,msg)
+			if self.linkUsers:
+				d = chat_message(self.Colors.User,pnick,msg)
+			else:
+				d = nolink_chat_message(self.Colors.User,pnick,msg)
 			GUI.writeToChannel(target,d)
 			# GUI.writeToChannel(target,f"{pnick}: {msg}")
 		else:
 			# private message
-			d = nolink_chat_message(USER_NAME_COLOR,pnick,msg)
+			d = nolink_chat_message(self.Colors.User,pnick,msg)
 			GUI.writeToUser(pnick,d)
 			# GUI.writeToUser(pnick,f"{pnick}: {msg}")
 
@@ -127,7 +151,7 @@ class quirc_ClientConnection(irc.IRCClient):
 		else:
 			pnick = user
 			phostmask = user
-		d = nolink_chat_icon_message(NOTICE_MESSAGE_COLOR,MSG_CHAT,pnick,message)
+		d = nolink_chat_icon_message(self.Colors.Notice,MSG_CHAT,pnick,message)
 		GUI.writeToActiveWindow(d)
 		GUI.writeToServer(d)
 		# GUI.writeToActiveWindow(f"NOTICE {pnick}: {message}")
@@ -135,16 +159,16 @@ class quirc_ClientConnection(irc.IRCClient):
 
 	def receivedMOTD(self, motd):
 		for line in motd:
-			d = notification_message(NOTIFICATION_MESSAGE_COLOR,MSG_STAR,line)
+			d = notification_message(self.Colors.Notify,MSG_STAR,line)
 			GUI.writeToServer(d)
 
 	def userJoined(self, user, channel):
-		d = notification_message(CHANNEL_MESSAGE_COLOR,MSG_HASH,f"{user} joined {channel}")
+		d = notification_message(self.Colors.Channel,MSG_HASH,f"{user} joined {channel}")
 		GUI.writeToChannel(channel,d)
 		self.sendLine(f"NAMES {channel}")
 
 	def userLeft(self, user, channel):
-		d = notification_message(CHANNEL_MESSAGE_COLOR,MSG_HASH,f"{user} left {channel}")
+		d = notification_message(self.Colors.Channel,MSG_HASH,f"{user} left {channel}")
 		GUI.writeToChannel(channel,d)
 		self.sendLine(f"NAMES {channel}")
 
@@ -162,18 +186,18 @@ class quirc_ClientConnection(irc.IRCClient):
 		oldNick = self.nickname
 		NICKNAME = f"{self.nickname}{random.randint(100, 999)}"
 		self.setNick(NICKNAME)
-		d = notification_message(NOTIFICATION_MESSAGE_COLOR,MSG_STAR,f"Nickname {oldNick} taken! Trying to use {NICKNAME} as new nickname...")
+		d = notification_message(self.Colors.Notify,MSG_STAR,f"Nickname {oldNick} taken! Trying to use {NICKNAME} as new nickname...")
 		GUI.writeToActiveWindow(d)
 		GUI.writeToServer(d)
 
 	def userRenamed(self, oldname, newname):
-		d = notification_message(CHANNEL_MESSAGE_COLOR,MSG_HASH,f"{oldname} is now known as {newname}")
+		d = notification_message(self.Colors.Channel,MSG_HASH,f"{oldname} is now known as {newname}")
 		GUI.writeToActiveWindow(d)
 		GUI.writeToServer(d)
 
 	def topicUpdated(self, user, channel, newTopic):
 		if newTopic == "": return
-		d = notification_message(CHANNEL_MESSAGE_COLOR,MSG_HASH,f"{user} set {channel}'s topic to \"{newTopic}\"")
+		d = notification_message(self.Colors.Channel,MSG_HASH,f"{user} set {channel}'s topic to \"{newTopic}\"")
 		GUI.writeToChannel(channel,d)
 		GUI.channelTopic(channel,newTopic)
 
@@ -181,7 +205,7 @@ class quirc_ClientConnection(irc.IRCClient):
 		channel = params[1]
 		if not params[2].isspace():
 			if params[2] != '':
-				d = notification_message(CHANNEL_MESSAGE_COLOR,MSG_HASH,f"{channel}'s topic is \"{params[2]}\"")
+				d = notification_message(self.Colors.Channel,MSG_HASH,f"{channel}'s topic is \"{params[2]}\"")
 				GUI.writeToChannel(channel,d)
 			GUI.channelTopic(channel,params[2])
 		else:
@@ -192,19 +216,19 @@ class quirc_ClientConnection(irc.IRCClient):
 		phostmask = user.split('!')[1]
 		if channel == self.nickname:
 			# private
-			d = notification_message(ACTION_MESSAGE_COLOR,MSG_USER,f"{pnick} {data}")
+			d = notification_message(self.Colors.Action,MSG_USER,f"{pnick} {data}")
 			GUI.writeToUser(pnick,d)
 		else:
 			#public
-			d = notification_message(ACTION_MESSAGE_COLOR,MSG_USER,f"{pnick} {data}")
+			d = notification_message(self.Colors.Action,MSG_USER,f"{pnick} {data}")
 			GUI.writeToChannel(channel,d)
 
 	def userKicked(self, kickee, channel, kicker, message):
 		if len(message)>0:
-			d = notification_message(CHANNEL_MESSAGE_COLOR,MSG_HASH,f"{kicker} kicked {kickee} from {channel} ({message})")
+			d = notification_message(self.Colors.Channel,MSG_HASH,f"{kicker} kicked {kickee} from {channel} ({message})")
 			GUI.writeToChannel(channel,d)
 		else:
-			d = notification_message(CHANNEL_MESSAGE_COLOR,MSG_HASH,f"{kicker} kicked {kickee} from {channel}")
+			d = notification_message(self.Colors.Channel,MSG_HASH,f"{kicker} kicked {kickee} from {channel}")
 			GUI.writeToChannel(channel,d)
 		self.sendLine(f"NAMES {channel}")
 
@@ -226,9 +250,9 @@ class quirc_ClientConnection(irc.IRCClient):
 			m = params[0].split(':')
 			if len(m)>=2:
 				msg = m[1].strip()
-				d = notification_message(CHANNEL_MESSAGE_COLOR,MSG_HASH,f"{nick} quit IRC ({msg})")
+				d = notification_message(self.Colors.Channel,MSG_HASH,f"{nick} quit IRC ({msg})")
 			else:
-				d = notification_message(CHANNEL_MESSAGE_COLOR,MSG_HASH,f"{nick} quit IRC")
+				d = notification_message(self.Colors.Channel,MSG_HASH,f"{nick} quit IRC")
 			GUI.writeToActiveWindow(d)
 			GUI.writeToServer(d)
 
@@ -356,8 +380,17 @@ def ssl_to_irc(host,port):
 	reactor.connectSSL(host, int(port), CLIENT, ssl.ClientContextFactory())
 	return CLIENT
 
+def restart_program():
+	"""Restarts the current program.
+	Note: this function does not return. Any cleanup action (like
+	saving data) must be done before calling this function."""
+	python = sys.executable
+	os.execl(python, python, * sys.argv)
+
 if __name__ == '__main__':
 	global GUI
+
+	ColorsInit()
 
 	# Load user info file if present...
 	if os.path.isfile(USER_INFORMATION_FILE):
@@ -376,8 +409,7 @@ if __name__ == '__main__':
 		with open(USER_INFORMATION_FILE, "w") as write_data:
 			json.dump(uinfo, write_data)
 
-	
-	GUI = qInterface.Window(tcp_to_irc,ssl_to_irc,IS_SSL_AVAILABLE)
+	GUI = qInterface.Window(tcp_to_irc,ssl_to_irc,IS_SSL_AVAILABLE,restart_program)
 	GUI.show()
 
 	reactor.run()

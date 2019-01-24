@@ -13,8 +13,11 @@ import Quirc.Client.Channel as Channel
 import Quirc.Client.User as User
 import Quirc.Dialog.Connect as Connect
 import Quirc.Dialog.Connecting as Connecting
+import Quirc.Dialog.UserInfo as UserInfo
+import Quirc.Dialog.Colors as Colors
 
 from Quirc.Settings import *
+from Quirc.Format import *
 
 class Window(QMainWindow):
 
@@ -60,6 +63,7 @@ class Window(QMainWindow):
 		self.CHANNELS.append(chan)
 		chan.writeText(text)
 		cw.show()
+		cw.resize(self.iWidth,self.iHeight)
 
 	def isInChannel(self,channel):
 		for c in self.CHANNELS:
@@ -81,6 +85,7 @@ class Window(QMainWindow):
 		self.CHANNELS.append(chan)
 		chan.writeText(text)
 		cw.show()
+		cw.resize(self.iWidth,self.iHeight)
 
 	def channelTopic(self,channel,text):
 		for c in self.CHANNELS:
@@ -115,9 +120,18 @@ class Window(QMainWindow):
 		x = Connect.Dialog(parent=self)
 		x.show()
 
-	def timeout(self,host):
-		QMessageBox.about(self, "Timed Out", f"Connection to {host} timed out!\nPlease try to connect to a different host.")
-		self.CONNECTING.close()
+	def userDialog(self):
+		x = UserInfo.Dialog(parent=self)
+		x.show()
+
+	def updateAllColors(self,obj):
+		for c in self.CHANNELS:
+			c.setColors(uColors)
+
+	def userColor(self):
+		x = Colors.Dialog(parent=self)
+		x.show()
+			#self.serverWindow.setColors(uColors)
 
 	def menuDisconnect(self):
 		for c in self.CHANNELS:
@@ -155,6 +169,7 @@ class Window(QMainWindow):
 			)
 
 		self.serverWindow.show()
+		cw.resize(self.iWidth,self.iHeight)
 
 	def exitDialog(self):
 		global app
@@ -166,7 +181,20 @@ class Window(QMainWindow):
 		except:
 			self.ACTIVE = ''
 
-	def __init__(self,tcp_func,ssl_func,ssl_available,parent=None):
+	def restartDialog(self):
+		self.RESTART()
+
+	def loadSettings(self):
+		if os.path.isfile(WINDOW_INFORMATION_FILE):
+			with open(WINDOW_INFORMATION_FILE, "r") as read_win:
+				data = json.load(read_win)
+				self.iWidth = data["initialWidth"]
+				self.iHeight = data["initialHeight"]
+		else:
+			self.iWidth = 640
+			self.iHeight = 480
+
+	def __init__(self,tcp_func,ssl_func,ssl_available,restart_func,parent=None):
 		super(Window, self).__init__(parent)
 		self.CHANNELS = []
 		self.SERVER = None
@@ -179,6 +207,8 @@ class Window(QMainWindow):
 		self.SSL_AVAILABLE = False
 		self.subWindow = None
 		self.CONNECTING = None
+		self.RESTART = restart_func
+		self.loadSettings()
 
 		self.MDI = QMdiArea()
 
@@ -209,12 +239,25 @@ class Window(QMainWindow):
 		ircMenu.addAction(self.actDisconnect)
 		self.actDisconnect.setEnabled(False)
 
-
 		ircMenu.addSeparator()
+
+		actRestart = QAction(QIcon(RESTART_ICON),"Restart Quirc",self)
+		actRestart.triggered.connect(self.restartDialog)
+		ircMenu.addAction(actRestart)
 
 		actExit = QAction(QIcon(EXIT_ICON),"Exit",self)
 		actExit.triggered.connect(self.exitDialog)
 		ircMenu.addAction(actExit)
+
+		setMenu = menubar.addMenu("Settings")
+
+		actUser = QAction(QIcon(USER_ICON),"User Information",self)
+		actUser.triggered.connect(self.userDialog)
+		setMenu.addAction(actUser)
+
+		actUserColor = QAction(QIcon(COLOR_ICON),"Colors",self)
+		actUserColor.triggered.connect(self.userColor)
+		setMenu.addAction(actUserColor)
 
 		winMenu = menubar.addMenu("Windows")
 

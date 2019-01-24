@@ -1,3 +1,10 @@
+Version 0.03001
+	* Various bugfixes
+	* Text colors can now be set with a dialog
+	* Default user settings can now be set with a dialog
+	* New windows no longer display minimized
+	* New menu option: relaunch the client
+
 Version 0.03000
 	* All new, re-factored client
 	* New MDI interface (reminicent of mIRC)

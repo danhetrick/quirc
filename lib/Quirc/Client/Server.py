@@ -11,12 +11,23 @@ from Quirc.Settings import *
 from Quirc.Format import *
 from Quirc.Commands import *
 
+global qColors
+
 class Window(QWidget):
+
+	def reloadColors(self):
+		self.Colors = loadColorSettings(COLOR_FILE)
+
+	def setColors(self,obj):
+		self.Colors = obj
 
 	def __init__(self,client,master,subwindow,parent=None):
 		super(Window,self).__init__(parent)
 		self.CLIENT = client
 		self.GUI = master
+
+		self.Colors = loadColorSettings(COLOR_FILE)
+
 		self.createUI()
 		self.SUBWINDOW = subwindow
 
@@ -59,6 +70,9 @@ class Window(QWidget):
 
 		self.chatDisplay.setFont(QUIRC_FONT)
 		self.ircInput.setFont(QUIRC_FONT)
+
+		self.chatDisplay.setStyleSheet(f"background-color: \"{self.Colors.Background}\"; color:  \"{self.Colors.Normal}\";")
+		self.ircInput.setStyleSheet(f"background-color: \"{self.Colors.Background}\"; color:  \"{self.Colors.Normal}\";")
 
 		self.setGeometry(QtCore.QRect(10, 10, 640, 480))
 
