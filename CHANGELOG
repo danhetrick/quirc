@@ -1,3 +1,17 @@
+Version 0.10
+	* Re-factored Quircclient
+	* All-new MDI interface
+	* Introducing QScript, the Quirc scripting language. A code editor is included in the client.
+
+Version 0.03002
+	* Added "window" settings dialog
+	* Added "join channel" dialog
+	* Added a status bar to display connection status
+	* Added a "change nick" dialog
+	* Fixed a bug where disconnection did *not* close all active windows
+	* Fixed a user name bug in private chat
+	* Fixed a bug where parted channels could not be displayed if rejoined
+
 Version 0.03001
 	* Various bugfixes
 	* Text colors can now be set with a dialog

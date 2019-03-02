@@ -1,0 +1,35 @@
+
+QMenuBar {
+    font-size: 10px;
+    font-weight: normal;
+    border: 0px solid #000;
+    background-color: transparent;
+}
+
+QMenuBar::item {
+    spacing: 5px; /* spacing between menu bar items */
+    padding: 5px 8px;
+    background: transparent;
+    border-radius: 0px;
+}
+
+QMenu {
+    font-size: 10px;
+    font-weight: normal;
+    color: black;
+    border: 1px solid lightgray;
+    background-color: #f0f0f0;        
+}
+
+QMenu::item::selected {
+    background-color: lightgray;
+}
+
+QMenu::item {
+    margin: 1px;
+    padding: 1px 20px;
+}
+
+QStatusBar::item {
+    border: 0px solid black
+}

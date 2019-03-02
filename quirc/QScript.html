@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <title>QScript Commands</title>
+  </head>
+  <body>
+    <p> </p>
+    <h1>QScript Commands</h1>
+    <p></p>
+    <p> </p>
+    <table style="width: 100%" border="1">
+      <tbody>
+        <tr>
+          <td style="text-align: left; vertical-align: middle; background-color: white;">
+            <h1>var <em>NAME VALUE<br>
+              </em></h1>
+          </td>
+          <td style="text-align: left; vertical-align: top; background-color: #cccccc;"><code>#
+              Create a variable<br>
+              var greeting "Hello, world!"<br>
+              <br>
+              # Use the variable in a command<br>
+              write console $greeting<br>
+            </code></td>
+        </tr>
+        <tr>
+          <td style="width: 330.767px;"><i>Arguments</i></td>
+          <td style="width: 593.233px;"><b>NAME:</b> The name of the variable;
+            this will be used with interpolation (see below). Each variable name
+            must be unique in a given script.<br>
+            <strong>VALUE:</strong> The variable's value.<br>
+            <b></b></td>
+        </tr>
+        <tr>
+          <td><em>Description</em><br>
+          </td>
+          <td>Variables allow scripts to store bits of information for reuse.
+            All inputs for all commands are interpolated; each input will have
+            the value of each variable "injected" into them. For each variable,
+            every instance of "$" followed by that variable's name will be
+            replaced with the variable's value.&nbsp; For example, assume that a
+            script has two variables, one named "<em>greeting</em>", with the
+            value of "Hello", and "<em>target</em>", with the variable of
+            "world". If an input of "<em>$greeting</em> <em>$target</em>!" is
+            interpolated, it will result in that input becoming "Hello world!".<br>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <p><br>
+    </p>
+    <table style="width: 100%" border="1">
+      <tbody>
+        <tr>
+          <td style="text-align: left; vertical-align: middle; background-color: white;">
+            <h1>set <em>VARIABLE VALUE<br>
+              </em></h1>
+          </td>
+          <td style="text-align: left; vertical-align: top; background-color: #cccccc;"><code>#
+              Create a variable<br>
+              var greeting "Hello"<br>
+              <br>
+              # Set the "greeting" variable to a new value<br>
+              set greeting "Goodbye"<br>
+            </code></td>
+        </tr>
+        <tr>
+          <td style="width: 330.767px;"><i>Arguments</i></td>
+          <td style="width: 593.233px;"><b>VARIABLE:</b> The name of the
+            variable to change.<br>
+            <strong>VALUE:</strong> The variable's new value.<br>
+            <b></b></td>
+        </tr>
+        <tr>
+          <td><em>Description</em><br>
+          </td>
+          <td>Changes a variable's value.<br>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <p><br>
+    </p>
+    <table style="width: 100%" border="1">
+      <tbody>
+        <tr>
+          <td style="text-align: left; vertical-align: middle; background-color: white;">
+            <h1>raw <em>COMMAND ARG[...]</em></h1>
+          </td>
+          <td style="text-align: left; vertical-align: top; background-color: #cccccc;"><code>#
+              Join #channel using "test" as a key<br>
+              raw join #channel "test"<br>
+            </code></td>
+        </tr>
+        <tr>
+          <td><i>Arguments</i></td>
+          <td><b>COMMAND:</b> The IRC command to issue.<br>
+            <strong>ARG[..]:</strong> The argument(s) to pass with the command<br>
+            <b></b></td>
+        </tr>
+        <tr>
+          <td style="width: 372.367px;"><em>Description</em><br>
+          </td>
+          <td style="width: 533.633px;">Sends a raw command to the IRC server<br>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <p><br>
+    </p>
+    <table style="width: 100%" border="1">
+      <tbody>
+        <tr>
+          <td style="text-align: left; vertical-align: middle; background-color: white;">
+            <h1>write <em>TARGET TEXT</em></h1>
+          </td>
+          <td style="text-align: left; vertical-align: top; background-color: #cccccc;"><code>#
+              Write to the server window<br>
+              write server "Hello world!"<br>
+              <br>
+              # Write to a channel window<br>
+              write #mychannel "This is the #mychannel window"<br>
+            </code></td>
+        </tr>
+        <tr>
+          <td style="width: 330.767px;"><i>Arguments</i></td>
+          <td style="width: 593.233px;"><b>TARGET:</b> The name of the window to
+            write to; <strong><code>server</code> </strong>will cause text to
+            be written to the server window, <strong> <code>console</code> </strong>will
+            cause text to be written to the console, and the name of a channel
+            or user will cause text to be written to the channel or user's
+            window.<br>
+            <strong>TEXT:</strong> The text to write.<br>
+            <b></b></td>
+        </tr>
+        <tr>
+          <td><em>Description</em><br>
+          </td>
+          <td>Writes text to a Quirc window.&nbsp; <em>Note:</em> this will <strong>only</strong>
+            print text to the window. <br>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <p><br>
+    </p>
+    <table style="width: 100%" border="1">
+      <tbody>
+        <tr>
+          <td style="text-align: left; vertical-align: middle; background-color: white;">
+            <h1>sleep <em>NUMBER</em></h1>
+          </td>
+          <td style="text-align: left; vertical-align: top; background-color: #cccccc;"><code>#
+              Wait for 10 seconds<br>
+              sleep 10<br>
+            </code></td>
+        </tr>
+        <tr>
+          <td style="width: 330.767px;"><i>Arguments</i></td>
+          <td style="width: 593.233px;"><b>NUMBER:</b> The number of seconds to
+            pause.<br>
+            <b></b></td>
+        </tr>
+        <tr>
+          <td><em>Description</em><br>
+          </td>
+          <td>Pauses the desired number of seconds before executing the next
+            command.<br>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <p><br>
+    </p>
+    <table style="width: 100%" border="1">
+      <tbody>
+        <tr>
+          <td style="text-align: left; vertical-align: middle; background-color: white; width: 327.867px;">
+            <h1>msleep <em>NUMBER</em></h1>
+          </td>
+          <td style="text-align: left; vertical-align: top; background-color: #cccccc; width: 578.133px;"><code>#
+              Wait half a second, or 500ms<br>
+              msleep 500<br>
+            </code></td>
+        </tr>
+        <tr>
+          <td><i>Arguments</i></td>
+          <td><b>NUMBER:</b> The number of milliseconds to pause.<br>
+            <b></b></td>
+        </tr>
+        <tr>
+          <td><em>Description</em><br>
+          </td>
+          <td>Pauses the desired number of milliseconds before executing the
+            next command </td>
+        </tr>
+      </tbody>
+    </table>
+    <p><br>
+    </p>
+    <table style="width: 100%" border="1">
+      <tbody>
+        <tr>
+          <td style="text-align: left; vertical-align: middle; background-color: white;">
+            <h1>join <em>CHANNEL [KEY]</em></h1>
+          </td>
+          <td style="text-align: left; vertical-align: top; background-color: #cccccc;"><code>#
+              Join the #quirc channel<br>
+              join #quirc<br>
+              <br>
+              # Join #example, locked with key "passwd"<br>
+              join #example "passwd"<br>
+            </code></td>
+        </tr>
+        <tr>
+          <td style="width: 330.767px;"><i>Arguments</i></td>
+          <td style="width: 593.233px;"><b>CHANNEL:</b> The name of the channel
+            to join.<br>
+            <strong>KEY:</strong> <em>Optional.</em> The channel's key, if
+            required.<br>
+            <b></b></td>
+        </tr>
+        <tr>
+          <td><em>Description</em><br>
+          </td>
+          <td>Joins a channel.<br>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <p><br>
+    </p>
+    <table style="width: 100%" border="1">
+      <tbody>
+        <tr>
+          <td style="text-align: left; vertical-align: middle; background-color: white; width: 330.133px;">
+            <h1>part <em>CHANNEL</em></h1>
+          </td>
+          <td style="text-align: left; vertical-align: top; background-color: #cccccc; width: 575.867px;"><code>#
+              Leave the #quirc channel<br>
+              part #quirc<br>
+            </code></td>
+        </tr>
+        <tr>
+          <td><i>Arguments</i></td>
+          <td><b>CHANNEL:</b> The name of the channel to leave.<br>
+            <b></b></td>
+        </tr>
+        <tr>
+          <td><em>Description</em><br>
+          </td>
+          <td>Leaves a channel.<br>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <p><br>
+    </p>
+    <table style="width: 100%" border="1">
+      <tbody>
+        <tr>
+          <td style="text-align: left; vertical-align: middle; background-color: white;">
+            <h1>nick <em>NEW_NICKNAME</em></h1>
+          </td>
+          <td style="text-align: left; vertical-align: top; background-color: #cccccc;"><code>#
+              Change the current nickname to "bob"<br>
+              nick "bob"<br>
+            </code></td>
+        </tr>
+        <tr>
+          <td style="width: 330.767px;"><i>Arguments</i></td>
+          <td style="width: 593.233px;"><b>NEW_NICKNAME:</b> The nickname to
+            change to.<br>
+            <b></b></td>
+        </tr>
+        <tr>
+          <td><em>Description</em><br>
+          </td>
+          <td>Changes your nickname. If the nickname is already in use, the new
+            nickname with "_" appended to the end will be used.<br>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <p><br>
+    </p>
+    <table style="width: 100%" border="1">
+      <tbody>
+        <tr>
+          <td style="text-align: left; vertical-align: middle; background-color: white;">
+            <h1>msg <em>TARGET TEXT</em></h1>
+          </td>
+          <td style="text-align: left; vertical-align: top; background-color: #cccccc;"><code>#
+              Send a greeting to everyone in #quirc<br>
+              msg #quirc "Hello, everyone!"<br>
+              <br>
+              # Send a private message to alice<br>
+              msg alice "Hello, alice!<br>
+            </code></td>
+        </tr>
+        <tr>
+          <td style="width: 330.767px;"><i>Arguments</i></td>
+          <td style="width: 593.233px;"><b>TARGET:</b> The name of the channel
+            or user to send the message to.<br>
+            <strong>TEXT:</strong> The message to send.<br>
+            <b></b></td>
+        </tr>
+        <tr>
+          <td><em>Description</em><br>
+          </td>
+          <td>Sends a private message.<br>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <p><br>
+    </p>
+  </body>
+</html>

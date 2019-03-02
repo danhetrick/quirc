@@ -1,0 +1,50 @@
+
+QMenuBar {
+    font-weight: normal;
+    border: 0px solid #000;
+    background-color: lightgray;
+}
+
+QMenuBar::item {
+    spacing: 5px; /* spacing between menu bar items */
+    padding: 3px 8px;
+    background: transparent;
+    border-radius: 0px;
+}
+
+QMenuBar::item:selected { /* when selected using mouse or keyboard */
+    background: gray;
+}
+
+QMenuBar::item:pressed {
+    background: gray;
+}
+
+QMenu {
+    font-size: 12px;
+    font-weight: normal;
+    color: black;
+    border: 1px solid black;
+    background-color: lightgray;     
+}
+
+QMenu::item::selected {
+    background-color: lightgray;
+}
+
+QMenu::item {
+    margin: 3px;
+    padding: 3px 30px;
+}
+
+QStatusBar::item {
+    border: 0px solid black
+}
+
+QToolBar {
+    font-weight: normal;
+    border: 0px solid #000;
+    background-color: lightgray;
+}
+
+
