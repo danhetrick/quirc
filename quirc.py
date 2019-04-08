@@ -1,7 +1,19 @@
 
+# Quirc IRC Client
+# Copyright (C) 2019  Daniel Hetrick
 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
 
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import sys
 import functools
@@ -517,17 +529,6 @@ class GUI(QMainWindow):
 			Qt.WindowMaximizeButtonHint |
 			Qt.WindowTitleHint )
 
-		# sw = QMdiSubWindow()
-		# w = ChannelWindow.Viewer(channel,self.irc,self,isserver)
-		# sw.setWidget(w)
-		# self.MDI.addSubWindow(sw)
-		# newChan = Channel(channel)
-		# newChan.subwindow = sw
-		# newChan.window = w
-		# self.windows[channel] = newChan
-
-
-
 		newChan.subwindow.resize(INITIAL_WINDOW_SIZE_WIDTH,INITIAL_WINDOW_SIZE_HEIGHT)
 
 		#newChan.window.show()
@@ -556,6 +557,7 @@ class GUI(QMainWindow):
 		d = system_display(f"Joined {channel}")
 		self.windows[channel].window.writeText(d)
 		self.windows[self.server].window.writeText(d)
+		self.windows[channel].chat.append(f"Joined {channel}")
 
 	def connected(self):
 		self.clientIsConnected()
@@ -603,15 +605,17 @@ class GUI(QMainWindow):
 			nick = user
 			hostmask = ''
 
-		if user in self.windows:
+		if nick in self.windows:
 			d = chat_display(nick,msg,MAX_USERNAME_SIZE)
-			self.windows[user].window.writeText(d)
+			self.windows[nick].window.writeText(d)
 			# self.windows[user].window.writeText(f"{nick}: {msg}")
+			self.windows[nick].chat.append(f"PRIVATE {user}: {msg}")
 		else:
-			self.newChannelWindow(user)
+			self.newChannelWindow(nick)
 			#self.windows[user].window.writeText(f"{nick}: {msg}")
 			d = chat_display(nick,msg,MAX_USERNAME_SIZE)
-			self.windows[user].window.writeText(d)
+			self.windows[nick].window.writeText(d)
+			self.windows[nick].chat.append(f"PRIVATE {user}: {msg}")
 
 	def publicmsg(self,user,target,msg):
 		#print(f"{target} {user}: {msg}")
@@ -630,6 +634,7 @@ class GUI(QMainWindow):
 			#self.windows[target].window.writeText(f"{nick}: {msg}")
 			d = chat_display(nick,msg,MAX_USERNAME_SIZE)
 			self.windows[target].window.writeText(d)
+			self.windows[target].chat.append(f"{target} {user}: {msg}")
 
 		# for w in self.windows:
 		# 	self.MDI.setActiveSubWindow(self.windows[w].subwindow)
@@ -648,6 +653,7 @@ class GUI(QMainWindow):
 			#self.windows[target].window.writeText(f"{nick}: {msg}")
 			d = notice_display(nick,msg,MAX_USERNAME_SIZE)
 			self.windows[target].window.writeText(d)
+			self.windows[target].chat.append(f"NOTICE {target} {user}: {msg}")
 
 		if target != self.nickname or target != '*':
 			d = notice_display(nick,f"{target}: {msg}",MAX_USERNAME_SIZE)
@@ -681,6 +687,7 @@ class GUI(QMainWindow):
 		d = system_display(msg)
 		if channel in self.windows:
 			self.windows[channel].window.writeText(d)
+			self.windows[channel].chat.append(msg)
 		self.windows[self.server].window.writeText(d)
 
 
@@ -688,6 +695,7 @@ class GUI(QMainWindow):
 		d = system_display(txt)
 		self.windows[channel].window.writeText(d)
 		self.windows[self.server].window.writeText(d)
+		self.windows[channel].chat.append(txt)
 
 	def joined(self,user,channel):
 		if channel in self.windows:
@@ -698,6 +706,7 @@ class GUI(QMainWindow):
 			d = system_display(f"{user} joined {channel}")
 			self.windows[channel].window.writeText(d)
 			self.windows[self.server].window.writeText(d)
+			self.windows[channel].chat.append(f"{user} joined {channel}")
 
 	def parted(self,user,channel):
 		if channel in self.windows:
@@ -708,6 +717,7 @@ class GUI(QMainWindow):
 			d = system_display(f"{user} left {channel}")
 			self.windows[channel].window.writeText(d)
 			self.windows[self.server].window.writeText(d)
+			self.windows[channel].chat.append(f"{user} left {channel}")
 
 	def rename(self,oldnick,newnick):
 		
@@ -723,6 +733,7 @@ class GUI(QMainWindow):
 			self.irc.sendLine(f"NAMES {p}")
 			d = system_display(f"{oldnick} is now known as {newnick}")
 			self.windows[p].window.writeText(d)
+			self.windows[p].chat.append(f"{oldnick} is now known as {newnick}")
 
 	def topic(self,user,channel,topic):
 		if channel in self.windows:
@@ -733,6 +744,7 @@ class GUI(QMainWindow):
 				self.windows[channel].window.setTopic(topic)
 				d = system_display(f"{user} set the topic to {topic}")
 				self.windows[channel].window.writeText(d)
+				self.windows[channel].chat.append(f"{user} set the topic to {topic}")
 
 	def users(self,channel,userlist):
 		
@@ -760,10 +772,12 @@ class GUI(QMainWindow):
 				d = system_display(f"{user} disconnected from IRC")
 				self.windows[p].window.writeText(d)
 				self.windows[self.server].window.writeText(d)
+				self.windows[p].chat.append(f"{user} disconnected from IRC")
 			else:
 				d = system_display(f"{user} disconnected from IRC ({msg})")
 				self.windows[p].window.writeText(d)
 				self.windows[self.server].window.writeText(d)
+				self.windows[p].chat.append(f"{user} disconnected from IRC ({msg})")
 
 
 	def action(self,user,channel,msg):
@@ -774,14 +788,18 @@ class GUI(QMainWindow):
 		if channel in self.windows:
 			d = action_display(user,msg)
 			self.windows[channel].window.writeText(d)
+			self.windows[channel].chat.append(f"ACTION {channel} {user} {msg}")
 
 
 	def kick(self,kicker,kickee,channel,message):
 		if len(message)>0:
 			d = system_display(f"{kicker} kicked {kickee} from {channel}: {message}")
+			self.windows[channel].chat.append(f"{kicker} kicked {kickee} from {channel}: {message}")
 		else:
 			d = system_display(f"{kicker} kicked {kickee} from {channel}")
+			self.windows[channel].chat.append(f"{kicker} kicked {kickee} from {channel}")
 		self.windows[channel].window.writeText(d)
+
 
 	def kicked(self,kicker,channel,message):
 		

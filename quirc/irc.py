@@ -1,4 +1,20 @@
 
+# Quirc IRC Client
+# Copyright (C) 2019  Daniel Hetrick
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 SSL_AVAILABLE = True
 
 import sys
@@ -21,22 +37,9 @@ except Exception as exception:
 from twisted.words.protocols import irc
 
 
-#from jonesplugins import PluginCollection
-
-	# def run(self):
-	# 	if self.use_ssl:
-	# 		bot = IRC_Connection_Factory(self.nickname,self.username, self.ircname)
-	# 		reactor.connectSSL(self.server,self.port,bot,ssl.ClientContextFactory())
-	# 		reactor.run(installSignalHandlers=0)
-	# 	else:
-	# 		bot = IRC_Connection_Factory(self.nickname,self.username, self.ircname)
-	# 		reactor.connectTCP(self.server, self.port, bot)
-	# 		reactor.run(installSignalHandlers=0)
-
 def connect(host,port,nick,username=None,ircname=None,gui=None,password=None):
 	bot = IRC_Connection_Factory(nick,username,ircname,gui,password)
 	reactor.connectTCP(host,port,bot)
-	#reactor.run(installSignalHandlers=0)
 
 def connectSSL(host,port,nick,username=None,ircname=None,gui=None,password=None):
 	bot = IRC_Connection_Factory(nick,username,ircname,gui,password)

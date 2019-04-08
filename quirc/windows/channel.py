@@ -1,5 +1,5 @@
 
-# Qbit IRC Client
+# Quirc IRC Client
 # Copyright (C) 2019  Daniel Hetrick
 
 # This program is free software: you can redistribute it and/or modify
@@ -92,6 +92,24 @@ class Viewer(QMainWindow):
 
 		self.parent.rebuildWindowMenu()
 
+	def doLeave(self):
+
+		cleaned = {}
+		for w in self.parent.windows:
+			if w == self.name:
+				self.parent.windows[w].subwindow.close()
+				self.parent.windows[w] = None
+			else:
+				cleaned[w] = self.parent.windows[w]
+
+		self.parent.windows = cleaned
+
+		self.parent.rebuildWindowMenu()
+
+	def doUserWhois(self):
+
+		self.parent.irc.whois(self.name)
+
 	def doTopicCopy(self):
 		cb = QApplication.clipboard()
 		cb.clear(mode=cb.Clipboard )
@@ -112,6 +130,33 @@ class Viewer(QMainWindow):
 		cb.clear(mode=cb.Clipboard )
 		cb.setText(f"{url}", mode=cb.Clipboard)
 
+	def saveAsTextDialog(self):
+		options = QFileDialog.Options()
+		options |= QFileDialog.DontUseNativeDialog
+		fileName, _ = QFileDialog.getSaveFileName(self,"Save Chat As...",INSTALL_DIRECTORY,"Text Files (*.txt);;All Files (*)", options=options)
+		if fileName:
+			self.FILENAME = fileName
+			if '.' in fileName:
+				pass
+			else:
+				fileName = fileName + '.txt'
+			chatlog = open(fileName,"w")
+			l = "\n".join(self.parent.windows[self.name].chat)
+			chatlog.write(l)
+
+	def saveAsHtmlDialog(self):
+		options = QFileDialog.Options()
+		options |= QFileDialog.DontUseNativeDialog
+		fileName, _ = QFileDialog.getSaveFileName(self,"Save Chat As...",INSTALL_DIRECTORY,"HTML Files (*.html);;All Files (*)", options=options)
+		if fileName:
+			self.FILENAME = fileName
+			if '.' in fileName:
+				pass
+			else:
+				fileName = fileName + '.html'
+			chatlog = open(fileName,"w")
+			chatlog.write(self.channelChatDisplay.toHtml())
+
 
 	def buildInterface(self):
 		self.setWindowTitle(" "+self.name)
@@ -120,25 +165,60 @@ class Viewer(QMainWindow):
 		if not self.isserver:
 			menubar = self.menuBar()
 
-			actMenu = menubar.addMenu("Channel")
+			if self.is_channel:
 
-			self.actPart = QAction(QIcon(CHANNEL_ICON),"Leave",self)
-			self.actPart.triggered.connect(self.doPart)
-			actMenu.addAction(self.actPart)
+				actMenu = menubar.addMenu("Channel")
 
-			clipMenu = menubar.addMenu("Clipboard")
+				self.actText = QAction(QIcon(FILE_ICON),"Save chat as text",self)
+				self.actText.triggered.connect(self.saveAsTextDialog)
+				actMenu.addAction(self.actText)
 
-			self.actSaveUrl = QAction("Copy channel's IRC URL",self)
-			self.actSaveUrl.triggered.connect(self.doIRCUrlCopy)
-			clipMenu.addAction(self.actSaveUrl)
+				self.actHtml = QAction(QIcon(HTML_ICON),"Save chat as HTML",self)
+				self.actHtml.triggered.connect(self.saveAsHtmlDialog)
+				actMenu.addAction(self.actHtml)
 
-			self.actSaveTopic = QAction("Copy topic",self)
-			self.actSaveTopic.triggered.connect(self.doTopicCopy)
-			clipMenu.addAction(self.actSaveTopic)
+				actMenu.addSeparator()
 
-			self.actSaveUsers = QAction("Copy user list",self)
-			self.actSaveUsers.triggered.connect(self.doUserCopy)
-			clipMenu.addAction(self.actSaveUsers)
+				self.actPart = QAction(QIcon(CHANNEL_ICON),"Leave channel",self)
+				self.actPart.triggered.connect(self.doPart)
+				actMenu.addAction(self.actPart)
+
+				clipMenu = menubar.addMenu("Clipboard")
+
+				self.actSaveUrl = QAction("Copy channel's IRC URL",self)
+				self.actSaveUrl.triggered.connect(self.doIRCUrlCopy)
+				clipMenu.addAction(self.actSaveUrl)
+
+				self.actSaveTopic = QAction("Copy topic",self)
+				self.actSaveTopic.triggered.connect(self.doTopicCopy)
+				clipMenu.addAction(self.actSaveTopic)
+
+				self.actSaveUsers = QAction("Copy user list",self)
+				self.actSaveUsers.triggered.connect(self.doUserCopy)
+				clipMenu.addAction(self.actSaveUsers)
+
+			else:
+
+				# User window
+				actMenu = menubar.addMenu("User Chat")
+
+				self.actText = QAction(QIcon(FILE_ICON),"Save chat as text",self)
+				self.actText.triggered.connect(self.saveAsTextDialog)
+				actMenu.addAction(self.actText)
+
+				self.actHtml = QAction(QIcon(HTML_ICON),"Save chat as HTML",self)
+				self.actHtml.triggered.connect(self.saveAsHtmlDialog)
+				actMenu.addAction(self.actHtml)
+
+				self.actWhois = QAction(QIcon(USER_ICON),"Whois User",self)
+				self.actWhois.triggered.connect(self.doUserWhois)
+				actMenu.addAction(self.actWhois)
+
+				actMenu.addSeparator()
+
+				self.actPart = QAction(QIcon(EXIT_ICON),"Close Window",self)
+				self.actPart.triggered.connect(self.doLeave)
+				actMenu.addAction(self.actPart)
 
 		if self.isserver:
 			self.setWindowIcon(QIcon(SERVER_ICON))
@@ -444,6 +524,23 @@ class Viewer(QMainWindow):
 
 		if len(tokens)>0:
 
+			# /me
+			if self.is_channel:
+				if tokens[0].lower() == "/me":
+					if len(tokens)>=2:
+						tokens.pop(0)
+						msg = ' '.join(tokens)
+						self.parent.irc.describe(self.name,msg)
+						d = action_display(self.parent.nickname,msg)
+						self.parent.windows[self.name].window.writeText(d)
+						self.parent.windows[self.name].chat.append(f"ACTION {self.name} {self.parent.nickname} {msg}")
+						return
+					else:
+						d = system_display("Usage: /me MESSAGE")
+						self.parent.windows[self.name].window.writeText(d)
+						return
+
+
 			# /whois
 			if tokens[0].lower() == "/whois":
 				if len(tokens)==2:
@@ -467,8 +564,17 @@ class Viewer(QMainWindow):
 						self.parent.irc.msg(target,msg,MAXIMUM_IRC_MESSAGE_SIZE)
 					if target in self.parent.windows:
 						#self.windows[target].window.writeText(f"{nick}: {msg}")
-						d = chat_display(self.parent.nickname,msg,MAX_USERNAME_SIZE)
+						d = mychat_display(self.parent.nickname,msg,MAX_USERNAME_SIZE)
 						self.parent.windows[target].window.writeText(d)
+						self.parent.windows[target].chat.append(f"{target} {self.parent.nickname}: {msg}")
+					else:
+						if len(target)>0:
+							if target[0]!='#':
+								# its a user, open a window
+								self.parent.newChannelWindow(target)
+								d = mychat_display(self.parent.nickname,msg,MAX_USERNAME_SIZE)
+								self.parent.windows[target].window.writeText(d)
+								self.parent.windows[target].chat.append(f"PRIVATE {target} {self.parent.nickname}: {msg}")
 					return
 				else:
 					d = system_display("Usage: /msg TARGET MESSAGE")
@@ -483,12 +589,14 @@ class Viewer(QMainWindow):
 					msg = ' '.join(tokens)
 					if self.irc:
 						self.irc.notice(target,msg)
+						self.parent.windows[target].chat.append(f"NOTICE {target} {self.parent.nickname}: {msg}")
 					else:
 						self.parent.irc.notice(target,msg)
 					if target in self.parent.windows:
 						#self.windows[target].window.writeText(f"{nick}: {msg}")
 						d = notice_display(self.parent.nickname,msg,MAX_USERNAME_SIZE)
 						self.parent.windows[target].window.writeText(d)
+						self.parent.windows[target].chat.append(f"NOTICE {target} {self.parent.nickname}: {msg}")
 					return
 				else:
 					d = system_display("Usage: /notice TARGET MESSAGE")
@@ -497,9 +605,9 @@ class Viewer(QMainWindow):
 
 
 		#self.parent.windows[self.name].window.writeText(f"{self.parent.nickname}: {user_input}")
-		d = mychat_display(self.parent.nickname,user_input,MAX_USERNAME_SIZE)
-		self.parent.windows[self.name].window.writeText(d)
 
+		if self.isserver: return
+		
 		if self.is_channel:
 			self.irc.msg(f"{self.name}",f"{user_input}",MAXIMUM_IRC_MESSAGE_SIZE)
 		else:
@@ -508,6 +616,10 @@ class Viewer(QMainWindow):
 				self.irc.msg(f"{p[0]}",f"{user_input}",MAXIMUM_IRC_MESSAGE_SIZE)
 			else:
 				self.irc.msg(f"{self.name}",f"{user_input}",MAXIMUM_IRC_MESSAGE_SIZE)
+
+		d = mychat_display(self.parent.nickname,user_input,MAX_USERNAME_SIZE)
+		self.parent.windows[self.name].window.writeText(d)
+		self.parent.windows[self.name].chat.append(f"{self.name} {self.parent.nickname}: {user_input}")
 
 	# Handle user input
 	def setTopic(self,topic):

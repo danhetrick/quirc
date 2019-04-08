@@ -4,7 +4,7 @@ Version 0.22
 	* Uses icons from Icons8.com.
 	* No scripting language.
 	* Simpler design (fixing many bugs from previous versions, as well as being easier to use).
-	* Required libraries are now relatively minimal (only PyQt and Twisted are required)
+	* Required libraries are now relatively minimal (only PyQt, Twisted, and qt5reactor are required)
 
 Version 0.10
 	* Re-factored Quircclient

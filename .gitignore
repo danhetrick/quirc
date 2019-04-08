@@ -1,2 +1,5 @@
 
 *.pyc
+settings/colors.json
+settings/lastserver.json
+settings/user.json
