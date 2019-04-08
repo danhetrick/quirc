@@ -1,3 +1,11 @@
+Version 0.22
+	* Completely re-written client, from the ground up.
+	* Now uses Twisted for IRC networking.
+	* Uses icons from Icons8.com.
+	* No scripting language.
+	* Simpler design (fixing many bugs from previous versions, as well as being easier to use).
+	* Required libraries are now relatively minimal (only PyQt and Twisted are required)
+
 Version 0.10
 	* Re-factored Quircclient
 	* All-new MDI interface

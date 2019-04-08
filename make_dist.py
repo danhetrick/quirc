@@ -1,16 +1,13 @@
 
 import os
 import sys
-#import zipfile
-#import zlib
 import shutil
 
 from quirc.common import *
 
-#compression = zipfile.ZIP_DEFLATED
 
 os.mkdir("./dist")
-os.mkdir("./dist/data")
+os.mkdir("./dist/settings")
 
 os.system("compile_resources.bat")
 
@@ -22,7 +19,7 @@ shutil.copy("./CHANGELOG", "./dist/CHANGELOG")
 shutil.copy("./LICENSE", "./dist/LICENSE")
 shutil.copy("./README.md", "./dist/README.md")
 
-shutil.copy("./data/user.json", "./dist/data/user.json")
+#shutil.copy("./data/user.json", "./dist/data/user.json")
 
 os.system("powershell.exe -nologo -noprofile -command \"& { Add-Type -A 'System.IO.Compression.FileSystem'; [IO.Compression.ZipFile]::CreateFromDirectory('dist', 'quirc_dist.zip'); }\" ")
 
