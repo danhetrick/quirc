@@ -94,6 +94,7 @@ HEARTBEAT_OFF_ICON = ":/heartoff.png"
 ABOUT_ICON = ":/about.png"
 FILE_ICON = ":/file.png"
 HTML_ICON = ":/html.png"
+CLIPBOARD_ICON = ":/clipboard.png"
 
 LOGO_IMAGE = ":/logo.png"
 QT_IMAGE = ":/qt.png"

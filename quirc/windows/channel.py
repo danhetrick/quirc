@@ -177,30 +177,30 @@ class Viewer(QMainWindow):
 				self.actHtml.triggered.connect(self.saveAsHtmlDialog)
 				actMenu.addAction(self.actHtml)
 
-				actMenu.addSeparator()
+				clipMenu = actMenu.addMenu(QIcon(CLIPBOARD_ICON),"Copy to clipboard")
 
-				self.actPart = QAction(QIcon(CHANNEL_ICON),"Leave channel",self)
-				self.actPart.triggered.connect(self.doPart)
-				actMenu.addAction(self.actPart)
-
-				clipMenu = menubar.addMenu("Clipboard")
-
-				self.actSaveUrl = QAction("Copy channel's IRC URL",self)
+				self.actSaveUrl = QAction("IRC server/channel URL",self)
 				self.actSaveUrl.triggered.connect(self.doIRCUrlCopy)
 				clipMenu.addAction(self.actSaveUrl)
 
-				self.actSaveTopic = QAction("Copy topic",self)
+				self.actSaveTopic = QAction("Channel topic",self)
 				self.actSaveTopic.triggered.connect(self.doTopicCopy)
 				clipMenu.addAction(self.actSaveTopic)
 
-				self.actSaveUsers = QAction("Copy user list",self)
+				self.actSaveUsers = QAction("Channel users",self)
 				self.actSaveUsers.triggered.connect(self.doUserCopy)
 				clipMenu.addAction(self.actSaveUsers)
+
+				actMenu.addSeparator()
+
+				self.actPart = QAction(QIcon(EXIT_ICON),"Leave channel",self)
+				self.actPart.triggered.connect(self.doPart)
+				actMenu.addAction(self.actPart)
 
 			else:
 
 				# User window
-				actMenu = menubar.addMenu("User Chat")
+				actMenu = menubar.addMenu("Private")
 
 				self.actText = QAction(QIcon(FILE_ICON),"Save chat as text",self)
 				self.actText.triggered.connect(self.saveAsTextDialog)
@@ -524,6 +524,17 @@ class Viewer(QMainWindow):
 
 		if len(tokens)>0:
 
+			# /nick
+			if tokens[0].lower() == "/nick":
+				if len(tokens)==2:
+					newnick = tokens[1]
+					self.parent.irc.setNick(newnick)
+					return
+				else:
+					d = system_display("Usage: /nick NEW_NICK")
+					self.parent.windows[self.name].window.writeText(d)
+					return
+
 			# /me
 			if self.is_channel:
 				if tokens[0].lower() == "/me":
@@ -533,7 +544,7 @@ class Viewer(QMainWindow):
 						self.parent.irc.describe(self.name,msg)
 						d = action_display(self.parent.nickname,msg)
 						self.parent.windows[self.name].window.writeText(d)
-						self.parent.windows[self.name].chat.append(f"ACTION {self.name} {self.parent.nickname} {msg}")
+						self.parent.windows[self.name].chat.append(f"{self.parent.getTimestamp()} ACTION {self.name} {self.parent.nickname} {msg}")
 						return
 					else:
 						d = system_display("Usage: /me MESSAGE")
@@ -566,7 +577,7 @@ class Viewer(QMainWindow):
 						#self.windows[target].window.writeText(f"{nick}: {msg}")
 						d = mychat_display(self.parent.nickname,msg,MAX_USERNAME_SIZE)
 						self.parent.windows[target].window.writeText(d)
-						self.parent.windows[target].chat.append(f"{target} {self.parent.nickname}: {msg}")
+						self.parent.windows[target].chat.append(f"{self.parent.getTimestamp()} {target} {self.parent.nickname}: {msg}")
 					else:
 						if len(target)>0:
 							if target[0]!='#':
@@ -574,7 +585,7 @@ class Viewer(QMainWindow):
 								self.parent.newChannelWindow(target)
 								d = mychat_display(self.parent.nickname,msg,MAX_USERNAME_SIZE)
 								self.parent.windows[target].window.writeText(d)
-								self.parent.windows[target].chat.append(f"PRIVATE {target} {self.parent.nickname}: {msg}")
+								self.parent.windows[target].chat.append(f"{self.parent.getTimestamp()} PRIVATE {target} {self.parent.nickname}: {msg}")
 					return
 				else:
 					d = system_display("Usage: /msg TARGET MESSAGE")
@@ -589,14 +600,14 @@ class Viewer(QMainWindow):
 					msg = ' '.join(tokens)
 					if self.irc:
 						self.irc.notice(target,msg)
-						self.parent.windows[target].chat.append(f"NOTICE {target} {self.parent.nickname}: {msg}")
+						self.parent.windows[target].chat.append(f"{self.parent.getTimestamp()} NOTICE {target} {self.parent.nickname}: {msg}")
 					else:
 						self.parent.irc.notice(target,msg)
 					if target in self.parent.windows:
 						#self.windows[target].window.writeText(f"{nick}: {msg}")
 						d = notice_display(self.parent.nickname,msg,MAX_USERNAME_SIZE)
 						self.parent.windows[target].window.writeText(d)
-						self.parent.windows[target].chat.append(f"NOTICE {target} {self.parent.nickname}: {msg}")
+						self.parent.windows[target].chat.append(f"{self.parent.getTimestamp()} NOTICE {target} {self.parent.nickname}: {msg}")
 					return
 				else:
 					d = system_display("Usage: /notice TARGET MESSAGE")
@@ -619,7 +630,7 @@ class Viewer(QMainWindow):
 
 		d = mychat_display(self.parent.nickname,user_input,MAX_USERNAME_SIZE)
 		self.parent.windows[self.name].window.writeText(d)
-		self.parent.windows[self.name].chat.append(f"{self.name} {self.parent.nickname}: {user_input}")
+		self.parent.windows[self.name].chat.append(f"{self.parent.getTimestamp()} {self.name} {self.parent.nickname}: {user_input}")
 
 	# Handle user input
 	def setTopic(self,topic):

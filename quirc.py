@@ -17,6 +17,7 @@
 
 import sys
 import functools
+from datetime import datetime
 
 from PyQt5.QtWidgets import *
 app = QApplication(sys.argv)
@@ -544,6 +545,9 @@ class GUI(QMainWindow):
 	def tileWindows(self):
 		self.MDI.tileSubWindows()
 
+	def getTimestamp(self):
+		return datetime.timestamp(datetime.now())
+
 	# IRC events
 
 	def whois(self,whois):
@@ -557,7 +561,7 @@ class GUI(QMainWindow):
 		d = system_display(f"Joined {channel}")
 		self.windows[channel].window.writeText(d)
 		self.windows[self.server].window.writeText(d)
-		self.windows[channel].chat.append(f"Joined {channel}")
+		self.windows[channel].chat.append(f"{self.getTimestamp()} Joined {channel}")
 
 	def connected(self):
 		self.clientIsConnected()
@@ -609,13 +613,13 @@ class GUI(QMainWindow):
 			d = chat_display(nick,msg,MAX_USERNAME_SIZE)
 			self.windows[nick].window.writeText(d)
 			# self.windows[user].window.writeText(f"{nick}: {msg}")
-			self.windows[nick].chat.append(f"PRIVATE {user}: {msg}")
+			self.windows[nick].chat.append(f"{self.getTimestamp()} PRIVATE {user}: {msg}")
 		else:
 			self.newChannelWindow(nick)
 			#self.windows[user].window.writeText(f"{nick}: {msg}")
 			d = chat_display(nick,msg,MAX_USERNAME_SIZE)
 			self.windows[nick].window.writeText(d)
-			self.windows[nick].chat.append(f"PRIVATE {user}: {msg}")
+			self.windows[nick].chat.append(f"{self.getTimestamp()} PRIVATE {user}: {msg}")
 
 	def publicmsg(self,user,target,msg):
 		#print(f"{target} {user}: {msg}")
@@ -634,7 +638,7 @@ class GUI(QMainWindow):
 			#self.windows[target].window.writeText(f"{nick}: {msg}")
 			d = chat_display(nick,msg,MAX_USERNAME_SIZE)
 			self.windows[target].window.writeText(d)
-			self.windows[target].chat.append(f"{target} {user}: {msg}")
+			self.windows[target].chat.append(f"{self.getTimestamp()} {target} {user}: {msg}")
 
 		# for w in self.windows:
 		# 	self.MDI.setActiveSubWindow(self.windows[w].subwindow)
@@ -653,7 +657,7 @@ class GUI(QMainWindow):
 			#self.windows[target].window.writeText(f"{nick}: {msg}")
 			d = notice_display(nick,msg,MAX_USERNAME_SIZE)
 			self.windows[target].window.writeText(d)
-			self.windows[target].chat.append(f"NOTICE {target} {user}: {msg}")
+			self.windows[target].chat.append(f"{self.getTimestamp()} NOTICE {target} {user}: {msg}")
 
 		if target != self.nickname or target != '*':
 			d = notice_display(nick,f"{target}: {msg}",MAX_USERNAME_SIZE)
@@ -687,7 +691,7 @@ class GUI(QMainWindow):
 		d = system_display(msg)
 		if channel in self.windows:
 			self.windows[channel].window.writeText(d)
-			self.windows[channel].chat.append(msg)
+			self.windows[channel].chat.append(f"{self.getTimestamp()} {msg}")
 		self.windows[self.server].window.writeText(d)
 
 
@@ -695,7 +699,7 @@ class GUI(QMainWindow):
 		d = system_display(txt)
 		self.windows[channel].window.writeText(d)
 		self.windows[self.server].window.writeText(d)
-		self.windows[channel].chat.append(txt)
+		self.windows[channel].chat.append(f"{self.getTimestamp()} {txt}")
 
 	def joined(self,user,channel):
 		if channel in self.windows:
@@ -706,7 +710,7 @@ class GUI(QMainWindow):
 			d = system_display(f"{user} joined {channel}")
 			self.windows[channel].window.writeText(d)
 			self.windows[self.server].window.writeText(d)
-			self.windows[channel].chat.append(f"{user} joined {channel}")
+			self.windows[channel].chat.append(f"{self.getTimestamp()} {user} joined {channel}")
 
 	def parted(self,user,channel):
 		if channel in self.windows:
@@ -717,7 +721,7 @@ class GUI(QMainWindow):
 			d = system_display(f"{user} left {channel}")
 			self.windows[channel].window.writeText(d)
 			self.windows[self.server].window.writeText(d)
-			self.windows[channel].chat.append(f"{user} left {channel}")
+			self.windows[channel].chat.append(f"{self.getTimestamp()} {user} left {channel}")
 
 	def rename(self,oldnick,newnick):
 		
@@ -733,7 +737,7 @@ class GUI(QMainWindow):
 			self.irc.sendLine(f"NAMES {p}")
 			d = system_display(f"{oldnick} is now known as {newnick}")
 			self.windows[p].window.writeText(d)
-			self.windows[p].chat.append(f"{oldnick} is now known as {newnick}")
+			self.windows[p].chat.append(f"{self.getTimestamp()} {oldnick} is now known as {newnick}")
 
 	def topic(self,user,channel,topic):
 		if channel in self.windows:
@@ -744,7 +748,7 @@ class GUI(QMainWindow):
 				self.windows[channel].window.setTopic(topic)
 				d = system_display(f"{user} set the topic to {topic}")
 				self.windows[channel].window.writeText(d)
-				self.windows[channel].chat.append(f"{user} set the topic to {topic}")
+				self.windows[channel].chat.append(f"{self.getTimestamp()} {user} set the topic to {topic}")
 
 	def users(self,channel,userlist):
 		
@@ -772,12 +776,12 @@ class GUI(QMainWindow):
 				d = system_display(f"{user} disconnected from IRC")
 				self.windows[p].window.writeText(d)
 				self.windows[self.server].window.writeText(d)
-				self.windows[p].chat.append(f"{user} disconnected from IRC")
+				self.windows[p].chat.append(f"{self.getTimestamp()} {user} disconnected from IRC")
 			else:
 				d = system_display(f"{user} disconnected from IRC ({msg})")
 				self.windows[p].window.writeText(d)
 				self.windows[self.server].window.writeText(d)
-				self.windows[p].chat.append(f"{user} disconnected from IRC ({msg})")
+				self.windows[p].chat.append(f"{self.getTimestamp()} {user} disconnected from IRC ({msg})")
 
 
 	def action(self,user,channel,msg):
@@ -788,16 +792,16 @@ class GUI(QMainWindow):
 		if channel in self.windows:
 			d = action_display(user,msg)
 			self.windows[channel].window.writeText(d)
-			self.windows[channel].chat.append(f"ACTION {channel} {user} {msg}")
+			self.windows[channel].chat.append(f"{self.getTimestamp()} ACTION {channel} {user} {msg}")
 
 
 	def kick(self,kicker,kickee,channel,message):
 		if len(message)>0:
 			d = system_display(f"{kicker} kicked {kickee} from {channel}: {message}")
-			self.windows[channel].chat.append(f"{kicker} kicked {kickee} from {channel}: {message}")
+			self.windows[channel].chat.append(f"{self.getTimestamp()} {kicker} kicked {kickee} from {channel}: {message}")
 		else:
 			d = system_display(f"{kicker} kicked {kickee} from {channel}")
-			self.windows[channel].chat.append(f"{kicker} kicked {kickee} from {channel}")
+			self.windows[channel].chat.append(f"{self.getTimestamp()} {kicker} kicked {kickee} from {channel}")
 		self.windows[channel].window.writeText(d)
 
 

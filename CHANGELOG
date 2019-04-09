@@ -5,6 +5,7 @@ Version 0.22
 	* No scripting language.
 	* Simpler design (fixing many bugs from previous versions, as well as being easier to use).
 	* Required libraries are now relatively minimal (only PyQt, Twisted, and qt5reactor are required)
+	* Added menus for channel and private message windows
 
 Version 0.10
 	* Re-factored Quircclient
