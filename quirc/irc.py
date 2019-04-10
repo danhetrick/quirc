@@ -88,8 +88,6 @@ class IRC_Connection(irc.IRCClient):
 
 		self.gui.registered()
 
-		self.join("#quirc")
-
 	def joined(self, channel):
 		self.gui.joinedChannel(channel)
 

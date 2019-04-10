@@ -75,6 +75,7 @@ IRC_NETWORKS = os.path.join(QUIRC_DIRECTORY, "servers.txt")
 LAST_SERVER_INFORMATION_FILE = os.path.join(SETTINGS_DIRECTORY, "lastserver.json")
 USER_FILE = os.path.join(SETTINGS_DIRECTORY, "user.json")
 COLOR_FILE = os.path.join(SETTINGS_DIRECTORY, "colors.json")
+AUTOJOIN_FILE = os.path.join(SETTINGS_DIRECTORY, "channels.json")
 
 # Graphics
 MDI_BACKGROUND = ":/background.png"
@@ -164,6 +165,18 @@ class Channel(object):
 		self.userbuffer = []
 
 # Usefull Functions
+
+def save_autojoin_channels(chans):
+	with open(AUTOJOIN_FILE, "w") as write_data:
+		json.dump(chans, write_data)
+
+def get_autojoins():
+	if os.path.isfile(AUTOJOIN_FILE):
+		with open(AUTOJOIN_FILE, "r") as read_server:
+			data = json.load(read_server)
+			return data
+	else:
+		return []
 
 def is_integer(n):
 	try:

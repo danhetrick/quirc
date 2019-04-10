@@ -22,6 +22,8 @@ from PyQt5 import QtCore
 
 from quirc.common import *
 
+import quirc.dialogs.add_channel as AddChannelDialog
+
 class Dialog(QDialog):
 
 	@staticmethod
@@ -33,26 +35,17 @@ class Dialog(QDialog):
 		return None
 
 	def return_strings(self):
-		#   Return list of values. It need map with str (self.lineedit.text() will return QString)
-		# self.user_data['nickname'] = str(self.nick.text())
-		# self.user_data['username'] = str(self.username.text())
-		# self.user_data['realname'] = str(self.realname.text())
+
+		items = [] 
+		for index in range(self.autoChannels.count()): 
+			 items.append(self.autoChannels.item(index).text())
+
+		save_autojoin_channels(items)
+
 		if self.DIALOG_CONNECT_VIA_SSL:
 			use_ssl = 1
 		else:
 			use_ssl = 0
-		#save_user_information(self.user_data)
-		# Only save server if it host isn't empty, and port is an integer
-		# if is_integer(self.port.text()):
-		# 	if len(self.host.text())>0:
-		# 		save_last_server( str(self.host.text()), int( self.port.text() ), str(self.password.text()), self.DIALOG_CONNECT_VIA_SSL )
-		# # Save user information
-		# user = {
-		# 	"nick": str(self.nick.text()),
-		# 	"username": str(self.username.text()),
-		# 	"realname": str(self.realname.text())
-		# }
-		# save_user(user)
 		retval = map(str, [self.nick.text(), self.username.text(), self.realname.text(), self.host.text(), self.port.text(), self.password.text()])
 		retval = list(retval)
 		retval.append(str(use_ssl))
@@ -64,6 +57,19 @@ class Dialog(QDialog):
 		else:
 			self.DIALOG_CONNECT_VIA_SSL = False
 
+	def doAddChannel(self):
+		self.x = AddChannelDialog.Dialog(self)
+		self.x.show()
+
+	def doRemoveChannel(self):
+		self.removeSel()
+
+	def removeSel(self):
+	    listItems=self.autoChannels.selectedItems()
+	    if not listItems: return        
+	    for item in listItems:
+	       self.autoChannels.takeItem(self.autoChannels.row(item))
+
 	def __init__(self,parent=None):
 		super(Dialog,self).__init__(parent)
 
@@ -74,11 +80,11 @@ class Dialog(QDialog):
 
 		last_server = get_last_server()
 		user = get_user()
+		aj = get_autojoins()
 
 		# Server information
 		hostLayout = QHBoxLayout()
 		self.hostLabel = QLabel("Server")
-		#self.host = QLineEdit("localhost")
 		self.host = QLineEdit(last_server["host"])
 		hostLayout.addWidget(self.hostLabel)
 		hostLayout.addStretch()
@@ -86,7 +92,6 @@ class Dialog(QDialog):
 
 		portLayout = QHBoxLayout()
 		self.portLabel = QLabel("Port")
-		#self.port = QLineEdit(str(6667))
 		self.port = QLineEdit(str(last_server["port"]))
 		portLayout.addWidget(self.portLabel)
 		portLayout.addStretch()
@@ -94,7 +99,6 @@ class Dialog(QDialog):
 
 		passLayout = QHBoxLayout()
 		self.passLabel = QLabel("Password")
-		#self.password = QLineEdit()
 		self.password = QLineEdit(last_server["password"])
 		passLayout.addWidget(self.passLabel)
 		passLayout.addStretch()
@@ -105,10 +109,6 @@ class Dialog(QDialog):
 
 		if last_server["ssl"]:
 			self.ssl.toggle()
-
-
-		# if int(self.server_data['ssl']) == 1:
-		# 	self.ssl.toggle()
 
 		servLayout = QVBoxLayout()
 		servLayout.addLayout(hostLayout)
@@ -122,7 +122,6 @@ class Dialog(QDialog):
 		# User information
 		nickLayout = QHBoxLayout()
 		self.nickLabel = QLabel("Nick")
-		#self.nick = QLineEdit(DEFAULT_NICKNAME)
 		self.nick = QLineEdit(user["nick"])
 		nickLayout.addWidget(self.nickLabel)
 		nickLayout.addStretch()
@@ -130,7 +129,6 @@ class Dialog(QDialog):
 
 		userLayout = QHBoxLayout()
 		self.userLabel = QLabel("Username")
-		#self.username = QLineEdit(DEFAULT_USERNAME)
 		self.username = QLineEdit(user["username"])
 		userLayout.addWidget(self.userLabel)
 		userLayout.addStretch()
@@ -138,7 +136,6 @@ class Dialog(QDialog):
 
 		realLayout = QHBoxLayout()
 		self.realLabel = QLabel("Real Name")
-		#self.realname = QLineEdit(DEFAULT_IRCNAME)
 		self.realname = QLineEdit(user["realname"])
 		realLayout.addWidget(self.realLabel)
 		realLayout.addStretch()
@@ -152,6 +149,44 @@ class Dialog(QDialog):
 		nickBox = QGroupBox("User Information")
 		nickBox.setLayout(nurLayout)
 
+		#############################
+		# autojoin channels
+
+		self.autoChannels = QListWidget(self)
+		self.autoChannels.setMaximumWidth(175)
+		#self.parent.autoChannels.addItem(f"{channel}")
+		for c in aj:
+			self.autoChannels.addItem(c)
+
+		self.addChannelButton = QPushButton("+")
+		self.addChannelButton.clicked.connect(self.doAddChannel)
+
+		self.removeChannelButton = QPushButton("-")
+		self.removeChannelButton.clicked.connect(self.doRemoveChannel)
+
+		buttonLayout = QHBoxLayout()
+		buttonLayout.addStretch()
+		buttonLayout.addWidget(self.addChannelButton)
+		buttonLayout.addWidget(self.removeChannelButton)
+
+		autoJoinLayout = QVBoxLayout()
+		autoJoinLayout.addWidget(self.autoChannels)
+		autoJoinLayout.addLayout(buttonLayout)
+		
+
+		chanBox = QGroupBox("Auto-Join Channels")
+		chanBox.setLayout(autoJoinLayout)
+
+		#############################
+
+		vLayout = QVBoxLayout()
+		vLayout.addWidget(nickBox)
+		vLayout.addWidget(servBox)
+
+		tLayout = QHBoxLayout()
+		tLayout.addLayout(vLayout)
+		tLayout.addWidget(chanBox)
+
 		# Buttons
 		buttons = QDialogButtonBox(self)
 		buttons.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
@@ -159,8 +194,9 @@ class Dialog(QDialog):
 		buttons.rejected.connect(self.reject)
 
 		finalLayout = QVBoxLayout()
-		finalLayout.addWidget(nickBox)
-		finalLayout.addWidget(servBox)
+		#finalLayout.addWidget(nickBox)
+		#finalLayout.addWidget(servBox)
+		finalLayout.addLayout(tLayout)
 		finalLayout.addWidget(buttons)
 
 		self.setWindowFlags(self.windowFlags()

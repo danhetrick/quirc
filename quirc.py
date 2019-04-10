@@ -48,7 +48,7 @@ import quirc.dialogs.nick as NickDialog
 import quirc.dialogs.networks as NetworkDialog
 import quirc.dialogs.about as AboutDialog
 
-import quirc.windows.channel as ChannelWindow
+import quirc.windows.channel as ChatWindow
 
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
@@ -101,6 +101,8 @@ class GUI(QMainWindow):
 		self.windows = {}
 
 		self.keepConnectionAlive = True
+
+		self.autojoin = []
 
 		self.colors = load_colors()
 
@@ -219,6 +221,7 @@ class GUI(QMainWindow):
 	def raiseWindow(self,w):
 
 		self.windows[w].window.showNormal()
+		self.windows[w].window.userTextInput.setFocus()
 
 	def rebuildWindowMenu(self):
 
@@ -287,15 +290,6 @@ class GUI(QMainWindow):
 			f = x.font()
 			f.setBold(False)
 			x.setFont(f)
-
-
-	def iterateWindowMenu(self):
-		for x in self.winMenu.actions():
-			t = x.text()
-			if t.isspace() or len(t)==0: continue
-			if t=="Tile Windows": continue
-			if t=="Cascade Windows": continue
-			print(x.text())
 
 	# Dialogs
 
@@ -518,10 +512,10 @@ class GUI(QMainWindow):
 		self.MDI.addSubWindow(x)
 		x.show()
 
-	def newChannelWindow(self,channel,isserver=False):
+	def newChatWindow(self,channel,isserver=False):
 		newChan = Channel(channel)
 		newChan.setSubwindow(QMdiSubWindow())
-		newChan.setWindow(ChannelWindow.Viewer(channel,self.irc,self,isserver))
+		newChan.setWindow(ChatWindow.Viewer(channel,self.irc,self,isserver))
 		newChan.subwindow.setWidget(newChan.window)
 		self.MDI.addSubWindow(newChan.subwindow)
 
@@ -557,7 +551,7 @@ class GUI(QMainWindow):
 		#self.windows[self.server].window.writeText(d)
 
 	def joinedChannel(self,channel):
-		self.newChannelWindow(channel)
+		self.newChatWindow(channel)
 		d = system_display(f"Joined {channel}")
 		self.windows[channel].window.writeText(d)
 		self.windows[self.server].window.writeText(d)
@@ -572,7 +566,7 @@ class GUI(QMainWindow):
 		self.actNick.setEnabled(True)
 		self.optAlive.setEnabled(True)
 
-		self.newChannelWindow(self.server,True)
+		self.newChatWindow(self.server,True)
 		d = system_display(f"Connected to {self.server}")
 		self.windows[self.server].window.writeText(d)
 
@@ -598,6 +592,15 @@ class GUI(QMainWindow):
 		if self.keepConnectionAlive:
 			self.irc.startHeartbeat()
 
+		# Autojoin channels
+		self.autojoin = get_autojoins()
+		for c in self.autojoin:
+			p = c.split("/")
+			if len(p)==2:
+				self.irc.join(p[0],p[1])
+			else:
+				self.irc.join(c)
+
 	def privatemsg(self,user,msg):
 		#print(f"{user}: {msg}")
 
@@ -615,7 +618,7 @@ class GUI(QMainWindow):
 			# self.windows[user].window.writeText(f"{nick}: {msg}")
 			self.windows[nick].chat.append(f"{self.getTimestamp()} PRIVATE {user}: {msg}")
 		else:
-			self.newChannelWindow(nick)
+			self.newChatWindow(nick)
 			#self.windows[user].window.writeText(f"{nick}: {msg}")
 			d = chat_display(nick,msg,MAX_USERNAME_SIZE)
 			self.windows[nick].window.writeText(d)

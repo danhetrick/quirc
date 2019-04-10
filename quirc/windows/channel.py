@@ -335,8 +335,9 @@ class Viewer(QMainWindow):
 			menu.addSeparator()
 
 			actWhois = menu.addAction('Whois User')
-			actMsg = menu.addAction('Message User')
 			actNotice = menu.addAction('Notice User')
+			actMsg = menu.addAction('Message User')
+			actWinMsg = menu.addAction('New Chat Window')
 
 			if self.is_op: menu.addSeparator()
 
@@ -384,6 +385,14 @@ class Viewer(QMainWindow):
 			if action == actMsg:
 				self.userTextInput.setText(f"/msg {user} ")
 				self.userTextInput.setFocus()
+				return True
+
+			if action == actWinMsg:
+				if user in self.parent.windows:
+					self.parent.windows[user].window.userTextInput.setFocus()
+				else:
+					self.parent.newChatWindow(user)
+					self.parent.windows[user].window.userTextInput.setFocus()
 				return True
 
 			if action == actNotice:
@@ -582,7 +591,7 @@ class Viewer(QMainWindow):
 						if len(target)>0:
 							if target[0]!='#':
 								# its a user, open a window
-								self.parent.newChannelWindow(target)
+								self.parent.newChatWindow(target)
 								d = mychat_display(self.parent.nickname,msg,MAX_USERNAME_SIZE)
 								self.parent.windows[target].window.writeText(d)
 								self.parent.windows[target].chat.append(f"{self.parent.getTimestamp()} PRIVATE {target} {self.parent.nickname}: {msg}")
