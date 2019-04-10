@@ -71,6 +71,10 @@ class Viewer(QMainWindow):
 
 		self.topic = ''
 
+		self.history_buffer = []
+		self.history_buffer_pointer = 0
+		self.history_buffer_max = 20
+
 		self.buildInterface()
 
 	def setServerIcon(self):
@@ -516,10 +520,27 @@ class Viewer(QMainWindow):
 
 		#self.log.append(remove_html_markup(text))
 
+	def keyPressEvent(self,event):
+		if len(self.history_buffer)==0: return
+		if event.key() == Qt.Key_Up:
+			self.history_buffer_pointer = self.history_buffer_pointer + 1
+			if self.history_buffer_pointer > self.history_buffer_max: self.history_buffer_pointer = self.history_buffer_max
+			if self.history_buffer_pointer > (len(self.history_buffer)-1): self.history_buffer_pointer = len(self.history_buffer) - 1
+			self.userTextInput.setText(self.history_buffer[self.history_buffer_pointer])
+		if event.key() == Qt.Key_Down:
+			self.history_buffer_pointer = self.history_buffer_pointer - 1
+			if self.history_buffer_pointer <= 0: self.history_buffer_pointer = 0
+			self.userTextInput.setText(self.history_buffer[self.history_buffer_pointer])
+
 	# Handle user input
 	def handleUserInput(self):
 		user_input = self.userTextInput.text()
 		self.userTextInput.setText('')
+
+		self.history_buffer.insert(0,user_input)
+		if len(self.history_buffer)>self.history_buffer_max:
+			self.history_buffer.pop()
+		self.history_buffer_pointer = 0
 
 		if self.is_channel:
 			# self.parent.handleChannelInput(self.name,user_input)
