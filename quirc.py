@@ -26,16 +26,19 @@ import qt5reactor
 qt5reactor.install()
 from twisted.internet import reactor, protocol
 
+SSL_IS_AVAILABLE = True
+
 try:
 	from twisted.internet import ssl
 except ImportError as error:
 	# Output expected ImportErrors.
 	print(error.__class__.__name__ + ": " + error.message)
-	IRC_SSL = False
+	SSL_IS_AVAILABLE = False
 except Exception as exception:
 	# Output unexpected Exceptions.
 	print(exception, False)
 	print(exception.__class__.__name__ + ": " + exception.message)
+	SSL_IS_AVAILABLE = False
 
 from twisted.words.protocols import irc
 
@@ -417,8 +420,8 @@ class GUI(QMainWindow):
 		
 	def doConnectDialog(self):
 
-		x = ConnectDialog.Dialog()
-		connection_info = x.get_connect_information(parent=self)
+		x = ConnectDialog.Dialog(SSL_IS_AVAILABLE,parent=self)
+		connection_info = x.get_connect_information(SSL_IS_AVAILABLE,parent=self)
 
 		# User cancled dialog
 		if not connection_info: return
@@ -427,8 +430,8 @@ class GUI(QMainWindow):
 
 	def doNetworkDialog(self):
 
-		x = NetworkDialog.Dialog()
-		connection_info = x.get_connect_information(parent=self)
+		x = NetworkDialog.Dialog(SSL_IS_AVAILABLE,parent=self)
+		connection_info = x.get_connect_information(SSL_IS_AVAILABLE,parent=self)
 
 		# User cancled dialog
 		if not connection_info: return
@@ -450,7 +453,14 @@ class GUI(QMainWindow):
 			Qt.WindowCloseButtonHint |
 			Qt.WindowTitleHint )
 		self.MDI.addSubWindow(x)
+
+		# Center window
+		wx = (self.MDI.width()/2)-(x.width()/2)
+		wy = (self.MDI.height()/2)-(x.height()/2)
+		x.move(wx,wy)
+
 		x.show()
+
 
 	def newChatWindow(self,channel,isserver=False):
 		newChan = Channel(channel)
@@ -565,8 +575,6 @@ class GUI(QMainWindow):
 
 	def publicmsg(self,user,target,msg):
 		#print(f"{target} {user}: {msg}")
-
-		self.raiseWindow(target)
 
 		p = user.split('!')
 		if len(p)==2:

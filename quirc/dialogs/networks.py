@@ -22,21 +22,25 @@ from PyQt5 import QtCore
 
 from quirc.common import *
 
+import quirc.dialogs.add_channel as AddChannelDialog
+
 class Dialog(QDialog):
 
 	@staticmethod
-	def get_connect_information(parent=None):
-		dialog = Dialog(parent)
+	def get_connect_information(can_do_ssl,parent=None):
+		dialog = Dialog(can_do_ssl,parent)
 		r = dialog.exec_()
 		if r:
 			return dialog.return_strings()
 		return None
 
 	def return_strings(self):
-		#   Return list of values. It need map with str (self.lineedit.text() will return QString)
-		# self.user_data['nickname'] = str(self.nick.text())
-		# self.user_data['username'] = str(self.username.text())
-		# self.user_data['realname'] = str(self.realname.text())
+
+		items = [] 
+		for index in range(self.autoChannels.count()): 
+			 items.append(self.autoChannels.item(index).text())
+
+		save_autojoin_channels(items)
 
 		h = self.StoredData[self.StoredServer]
 		if "ssl" in h[3]:
@@ -45,11 +49,7 @@ class Dialog(QDialog):
 			use_ssl = 0
 		host = h[0]
 		port = int(h[1])
-		#save_user_information(self.user_data)
-		# Only save server if it host isn't empty, and port is an integer
-		# if is_integer(port):
-		# 	if len(host)>0:
-		# 		save_last_server( host, port, '', str(use_ssl) )
+
 		retval = map(str, [self.nick.text(), self.username.text(), self.realname.text(), host, port, ''])
 		retval = list(retval)
 		retval.append(str(use_ssl))
@@ -64,13 +64,30 @@ class Dialog(QDialog):
 		else:
 			self.connType.setText(f"Connect via TCP/IP to port {self.StoredData[self.StoredServer][1]}")
 
-	def __init__(self,parent=None):
+	def doAddChannel(self):
+		self.x = AddChannelDialog.Dialog(self)
+		self.x.show()
+
+	def doRemoveChannel(self):
+		self.removeSel()
+
+	def removeSel(self):
+	    listItems=self.autoChannels.selectedItems()
+	    if not listItems: return        
+	    for item in listItems:
+	       self.autoChannels.takeItem(self.autoChannels.row(item))
+
+	def __init__(self,can_do_ssl,parent=None):
 		super(Dialog,self).__init__(parent)
+
+		self.can_do_ssl = can_do_ssl
+		self.parent = parent
 
 		self.StoredServer = 0
 		self.StoredData = []
 
 		self.user_data = get_user()
+
 
 		self.setWindowTitle(f"Connect to Network")
 		self.setWindowIcon(QIcon(NETWORK_ICON))
@@ -100,6 +117,9 @@ class Dialog(QDialog):
 			x[1].strip()
 			x[2].strip()
 			x[3].strip()
+			if "ssl" in x[3]:
+				if not self.can_do_ssl: continue
+			#print(self.can_do_ssl)
 			self.StoredData.append(x)
 			self.servers.addItem(x[0])
 
@@ -113,7 +133,7 @@ class Dialog(QDialog):
 
 		fstoreLayout = QVBoxLayout()
 		fstoreLayout.addWidget(self.servers)
-		fstoreLayout.addStretch()
+		#fstoreLayout.addStretch()
 		fstoreLayout.addLayout(ntLayout)
 		fstoreLayout.addLayout(ctLayout)
 
@@ -150,16 +170,70 @@ class Dialog(QDialog):
 		nickBox = QGroupBox("User Information")
 		nickBox.setLayout(nurLayout)
 
+		#############################
+		# autojoin channels
+
+		self.autoChannels = QListWidget(self)
+		self.autoChannels.setMaximumWidth(175)
+		#self.parent.autoChannels.addItem(f"{channel}")
+		for c in get_autojoins():
+			p = c.split('/')
+			if len(p)==2:
+				# x = self.autoChannels.addItem(c)
+				# x.setIcon(QIcon(LOCKED_ICON))
+				item = QListWidgetItem(c)
+				item.setIcon(QIcon(LOCKED_ICON))
+				self.autoChannels.addItem(item)
+			else:
+				# x = self.autoChannels.addItem(c)
+				# x.setIcon(QIcon(CHANNEL_ICON))
+				item = QListWidgetItem(c)
+				item.setIcon(QIcon(CHANNEL_ICON))
+				self.autoChannels.addItem(item)
+
+		self.addChannelButton = QPushButton("+")
+		self.addChannelButton.clicked.connect(self.doAddChannel)
+
+		self.removeChannelButton = QPushButton("-")
+		self.removeChannelButton.clicked.connect(self.doRemoveChannel)
+
+		buttonLayout = QHBoxLayout()
+		buttonLayout.addStretch()
+		buttonLayout.addWidget(self.addChannelButton)
+		buttonLayout.addWidget(self.removeChannelButton)
+
+		autoJoinLayout = QVBoxLayout()
+		autoJoinLayout.addWidget(self.autoChannels)
+		autoJoinLayout.addLayout(buttonLayout)
+		
+
+		chanBox = QGroupBox("Auto-Join Channels")
+		chanBox.setLayout(autoJoinLayout)
+
+		#############################
+
 		# Buttons
 		buttons = QDialogButtonBox(self)
 		buttons.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
 		buttons.accepted.connect(self.accept)
 		buttons.rejected.connect(self.reject)
 
+
+		vLayout = QVBoxLayout()
+		vLayout.addWidget(nickBox)
+		vLayout.addWidget(servBox)
+
+		hLayout = QHBoxLayout()
+		hLayout.addLayout(vLayout)
+		hLayout.addWidget(chanBox)
+
+
 		finalLayout = QVBoxLayout()
-		finalLayout.addWidget(nickBox)
-		finalLayout.addWidget(servBox)
+		finalLayout.addLayout(hLayout)
 		finalLayout.addWidget(buttons)
+		# finalLayout.addWidget(nickBox)
+		# finalLayout.addWidget(servBox)
+		# finalLayout.addWidget(buttons)
 
 		self.setWindowFlags(self.windowFlags()
                     ^ QtCore.Qt.WindowContextHelpButtonHint)

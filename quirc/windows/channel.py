@@ -243,7 +243,12 @@ class Viewer(QMainWindow):
 			self.channelUserDisplay = QListWidget(self)
 			self.channelUserDisplay.setObjectName("channelUserDisplay")
 			self.channelUserDisplay.installEventFilter(self)
-			self.channelUserDisplay.setFont(self.fontBold)
+			# self.channelUserDisplay.setFont(self.fontBold)
+			# QUIRC_USERLIST_FONT_SIZE
+			self.channelUserDisplay.setFont(self.font)
+			f = self.channelUserDisplay.font()
+			f.setPointSize(QUIRC_USERLIST_FONT_SIZE)
+			self.channelUserDisplay.setFont(f)
 
 		self.userTextInput = QLineEdit(self)
 		self.userTextInput.setObjectName("userTextInput")
@@ -254,7 +259,7 @@ class Viewer(QMainWindow):
 			self.horizontalSplitter = QSplitter(Qt.Horizontal)
 			self.horizontalSplitter.addWidget(self.channelChatDisplay)
 			self.horizontalSplitter.addWidget(self.channelUserDisplay)
-			self.horizontalSplitter.setSizes([400,100])
+			self.horizontalSplitter.setSizes([390,110])
 
 		self.verticalSplitter = QSplitter(Qt.Vertical)
 		if self.is_channel:
@@ -309,8 +314,8 @@ class Viewer(QMainWindow):
 					if not self.is_voiced:
 						return True
 				menu = QMenu()
-				actDeop = menu.addAction('De-op self')
-				actDevoice = menu.addAction('De-voice self')
+				actDeop = menu.addAction(QIcon(MINUS_ICON),'De-op self')
+				actDevoice = menu.addAction(QIcon(MINUS_ICON),'De-voice self')
 				if self.is_op:
 					actDevoice.setVisible(False)
 				if self.is_voiced:
@@ -329,27 +334,27 @@ class Viewer(QMainWindow):
 			menu = QMenu()
 
 			if self.is_op:
-				infoChan = menu.addAction(f"{self.parent.nickname} (Operator)")
+				infoChan = menu.addAction(QIcon(USER_ICON),f"{self.parent.nickname} (Operator)")
 			elif self.is_voiced:
-				infoChan = menu.addAction(f"{self.parent.nickname} (Voiced)")
+				infoChan = menu.addAction(QIcon(USER_ICON),f"{self.parent.nickname} (Voiced)")
 			else:
-				infoChan = menu.addAction(f"{self.parent.nickname}")
+				infoChan = menu.addAction(QIcon(USER_ICON),f"{self.parent.nickname}")
 
 			infoChan.setFont(self.fontBoldItalic)
 			menu.addSeparator()
 
-			actWhois = menu.addAction('Whois User')
-			actNotice = menu.addAction('Notice User')
-			actMsg = menu.addAction('Message User')
-			actWinMsg = menu.addAction('New Chat Window')
+			actWhois = menu.addAction(QIcon(WHOIS_ICON),'Whois User')
+			actNotice = menu.addAction(QIcon(MESSAGE_ICON),'Notice User')
+			#actMsg = menu.addAction('Message User')
+			actWinMsg = menu.addAction(QIcon(NEW_WINDOW_ICON),'Message in New Window')
 
 			if self.is_op: menu.addSeparator()
 
-			actOp = menu.addAction('Give ops')
-			actDeop = menu.addAction('Take ops')
+			actOp = menu.addAction(QIcon(PLUS_ICON),'Give ops')
+			actDeop = menu.addAction(QIcon(MINUS_ICON),'Take ops')
 
-			actVoice = menu.addAction('Give voice')
-			actDevoice = menu.addAction('Take voice')
+			actVoice = menu.addAction(QIcon(PLUS_ICON),'Give voice')
+			actDevoice = menu.addAction(QIcon(MINUS_ICON),'Take voice')
 
 			if user_op:
 				actOp.setVisible(False)
@@ -361,14 +366,14 @@ class Viewer(QMainWindow):
 			else:
 				actDevoice.setVisible(False)
 
-			actKick = menu.addAction('Kick')
-			actBan = menu.addAction('Ban')
+			actKick = menu.addAction(QIcon(NO_ICON),'Kick')
+			actBan = menu.addAction(QIcon(BAN_ICON),'Ban')
 
 			if len(self.banned)>0:
 				if self.is_op:
 					menuBanned = menu.addMenu("Remove Ban")
 					for u in self.banned:
-						action = menuBanned.addAction(f"{u}")
+						action = menuBanned.addAction(QIcon(MINUS_ICON),f"{u}")
 						action.triggered.connect(
 							lambda state,user=u: self.unban(user))
 
@@ -386,10 +391,10 @@ class Viewer(QMainWindow):
 				self.irc.whois(user)
 				return True
 
-			if action == actMsg:
-				self.userTextInput.setText(f"/msg {user} ")
-				self.userTextInput.setFocus()
-				return True
+			# if action == actMsg:
+			# 	self.userTextInput.setText(f"/msg {user} ")
+			# 	self.userTextInput.setFocus()
+			# 	return True
 
 			if action == actWinMsg:
 				if user in self.parent.windows:

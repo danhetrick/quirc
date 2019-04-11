@@ -35,6 +35,7 @@ DEFAULT_IRCNAME = f"{APPLICATION_NAME} {APPLICATION_VERSION}"
 
 QUIRC_FONT = "Consolas"
 QUIRC_FONT_SIZE = 10
+QUIRC_USERLIST_FONT_SIZE = 11
 
 QUIRC_HOTKEY_CONNECT = None
 QUIRC_HOTKEY_DISCONNECT = "Ctrl+D"
@@ -96,6 +97,16 @@ ABOUT_ICON = ":/about.png"
 FILE_ICON = ":/file.png"
 HTML_ICON = ":/html.png"
 CLIPBOARD_ICON = ":/clipboard.png"
+LOCKED_ICON = ":/locked.png"
+
+NEW_WINDOW_ICON = ":/newwindow.png"
+MESSAGE_ICON = ":/message.png"
+WHOIS_ICON = ":/whois.png"
+
+NO_ICON = ":/no.png"
+BAN_ICON = ":/ban.png"
+PLUS_ICON = ":/plus.png"
+MINUS_ICON = ":/minus.png"
 
 LOGO_IMAGE = ":/logo.png"
 QT_IMAGE = ":/qt.png"

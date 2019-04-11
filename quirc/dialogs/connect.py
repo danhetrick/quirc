@@ -27,8 +27,8 @@ import quirc.dialogs.add_channel as AddChannelDialog
 class Dialog(QDialog):
 
 	@staticmethod
-	def get_connect_information(parent=None):
-		dialog = Dialog(parent)
+	def get_connect_information(can_do_ssl,parent=None):
+		dialog = Dialog(can_do_ssl,parent)
 		r = dialog.exec_()
 		if r:
 			return dialog.return_strings()
@@ -70,8 +70,11 @@ class Dialog(QDialog):
 	    for item in listItems:
 	       self.autoChannels.takeItem(self.autoChannels.row(item))
 
-	def __init__(self,parent=None):
+	def __init__(self,can_do_ssl,parent=None):
 		super(Dialog,self).__init__(parent)
+
+		self.can_do_ssl = can_do_ssl
+		self.parent = parent
 
 		self.DIALOG_CONNECT_VIA_SSL = False
 
@@ -109,6 +112,10 @@ class Dialog(QDialog):
 
 		if last_server["ssl"]:
 			self.ssl.toggle()
+
+		if not self.can_do_ssl:
+			self.DIALOG_CONNECT_VIA_SSL = False
+			self.ssl.setEnabled(False)
 
 		servLayout = QVBoxLayout()
 		servLayout.addLayout(hostLayout)
@@ -156,7 +163,19 @@ class Dialog(QDialog):
 		self.autoChannels.setMaximumWidth(175)
 		#self.parent.autoChannels.addItem(f"{channel}")
 		for c in aj:
-			self.autoChannels.addItem(c)
+			p = c.split('/')
+			if len(p)==2:
+				# x = self.autoChannels.addItem(c)
+				# x.setIcon(QIcon(LOCKED_ICON))
+				item = QListWidgetItem(c)
+				item.setIcon(QIcon(LOCKED_ICON))
+				self.autoChannels.addItem(item)
+			else:
+				# x = self.autoChannels.addItem(c)
+				# x.setIcon(QIcon(CHANNEL_ICON))
+				item = QListWidgetItem(c)
+				item.setIcon(QIcon(CHANNEL_ICON))
+				self.autoChannels.addItem(item)
 
 		self.addChannelButton = QPushButton("+")
 		self.addChannelButton.clicked.connect(self.doAddChannel)

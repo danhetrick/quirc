@@ -36,9 +36,19 @@ class Dialog(QDialog):
 
 		#print(channel,key)
 		if key == "":
-			self.parent.autoChannels.addItem(f"{channel}")
+			#self.parent.autoChannels.addItem(QIcon(CHANNEL_ICON),f"{channel}")
+
+			item = QListWidgetItem(f"{channel}")
+			item.setIcon(QIcon(CHANNEL_ICON))
+			self.parent.autoChannels.addItem(item)
+
 		else:
-			self.parent.autoChannels.addItem(f"{channel}/{key}")
+			#self.parent.autoChannels.addItem(QIcon(LOCKED_ICON),f"{channel}/{key}")
+
+			item = QListWidgetItem(f"{channel}/{key}")
+			item.setIcon(QIcon(LOCKED_ICON))
+			self.parent.autoChannels.addItem(item)
+
 		self.close()
 
 	def __init__(self,parent=None):
@@ -59,7 +69,6 @@ class Dialog(QDialog):
 		keyLayout = QHBoxLayout()
 		self.keyLabel = QLabel("Key")
 		self.key = QLineEdit()
-		#self.key.setEchoMode(QLineEdit.Password)
 		keyLayout.addWidget(self.keyLabel)
 		keyLayout.addStretch()
 		keyLayout.addWidget(self.key)

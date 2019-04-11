@@ -6,6 +6,11 @@ Version 0.22
 	* Simpler design (fixing many bugs from previous versions, as well as being easier to use).
 	* Required libraries are now relatively minimal (only PyQt, Twisted, and qt5reactor are required)
 	* Added menus for channel and private message windows
+	* Added option to join preset channels on connection
+	* If the necessary libraries for SSL connections are not installed, the option to connect via SSL is disabled
+	* Added command history to chat windows
+	* Added /msg, /join, /me, /notice, and /whois commands
+	* Centered the "about" dialog
 
 Version 0.10
 	* Re-factored Quircclient
