@@ -554,6 +554,22 @@ class Viewer(QMainWindow):
 
 		if len(tokens)>0:
 
+			# /join
+			if tokens[0].lower() == "/join":
+				if len(tokens)>=3:
+					tokens.pop(0)
+					channel = tokens.pop(0)
+					key = " ".join(tokens)
+					self.parent.irc.join(channel,key)
+				elif len(tokens)==2:
+					tokens.pop(0)
+					channel = tokens.pop(0)
+					self.parent.irc.join(channel)
+				else:
+					d = system_display("Usage: /join CHANNEL [KEY]")
+					self.parent.windows[self.name].window.writeText(d)
+					return
+
 			# /nick
 			if tokens[0].lower() == "/nick":
 				if len(tokens)==2:
@@ -580,7 +596,6 @@ class Viewer(QMainWindow):
 						d = system_display("Usage: /me MESSAGE")
 						self.parent.windows[self.name].window.writeText(d)
 						return
-
 
 			# /whois
 			if tokens[0].lower() == "/whois":

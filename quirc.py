@@ -291,6 +291,76 @@ class GUI(QMainWindow):
 			f.setBold(False)
 			x.setFont(f)
 
+	def connectToIRC(self,connection_info):
+
+		nick = connection_info[0]
+		username = connection_info[1]
+		realname = connection_info[2]
+		host = connection_info[3]
+		port = connection_info[4]
+		password = connection_info[5]
+		use_ssl = connection_info[6]
+
+		# Sanity check
+		errs = []
+		if len(nick)==0: errs.append("nickname not entered")
+		if len(username)==0: errs.append("username not entered")
+		if len(realname)==0: errs.append("real name not entered")
+		if len(host)==0: errs.append("host not entered")
+		if len(port)==0: errs.append("port not entered")
+		if not is_integer(port):
+			if port!= "": errs.append(f"invalid port \"{port}\"")
+		if len(errs)>0:
+			msg = QMessageBox()
+			msg.setWindowIcon(QIcon(QUIRC_ICON))
+			msg.setIcon(QMessageBox.Critical)
+			msg.setText("Missing or Invalid Input")
+			es = ""
+			for e in errs: es = es + f"<li>{e}</li>"
+			msg.setInformativeText(f"<ul>{es}</ul>")
+			msg.setWindowTitle("Can't connect to IRC")
+			msg.exec_()
+			return
+
+		# Save server information
+		if use_ssl==1:
+			save_last_server( host, port, password, True )
+		else:
+			save_last_server( host, port, password, False )
+
+		# Save user information
+		user = {
+			"nick": str(nick),
+			"username": str(username),
+			"realname": str(realname)
+		}
+		save_user(user)
+
+		self.host = host
+		self.port = port
+		self.server = f"{self.host}:{self.port}"
+
+		# If we're already connected to a server, disconnect
+		if self.is_connected:
+			self.doDisconnect()
+
+		self.clientIsConnecting()
+
+		self.nickname = nick
+
+		self.autojoin = get_autojoins()
+
+		if use_ssl == 1:
+			if password != '':
+				connectSSL(host,int(port),nick,username,realname,self,password)
+			else:
+				connectSSL(host,int(port),nick,username,realname,self,None)
+		else:
+			if password != '':
+				connect(host,int(port),nick,username,realname,self,password)
+			else:
+				connect(host,int(port),nick,username,realname,self,None)
+
 	# Dialogs
 
 	def doNickDialog(self):
@@ -306,7 +376,6 @@ class GUI(QMainWindow):
 			msg.setWindowIcon(QIcon(QUIRC_ICON))
 			msg.setIcon(QMessageBox.Critical)
 			msg.setText("No nick entered")
-			#msg.setInformativeText(f"No channel entered")
 			msg.setWindowTitle("Error")
 			msg.exec_()
 			return
@@ -337,7 +406,6 @@ class GUI(QMainWindow):
 			msg.setWindowIcon(QIcon(QUIRC_ICON))
 			msg.setIcon(QMessageBox.Critical)
 			msg.setText("No channel entered")
-			#msg.setInformativeText(f"No channel entered")
 			msg.setWindowTitle("Error")
 			msg.exec_()
 			return
@@ -355,71 +423,7 @@ class GUI(QMainWindow):
 		# User cancled dialog
 		if not connection_info: return
 
-		nick = connection_info[0]
-		username = connection_info[1]
-		realname = connection_info[2]
-		host = connection_info[3]
-		port = connection_info[4]
-		password = connection_info[5]
-		use_ssl = connection_info[6]
-
-		# Sanity check
-		errs = []
-		if len(nick)==0: errs.append("nickname not entered")
-		if len(username)==0: errs.append("username not entered")
-		if len(realname)==0: errs.append("real name not entered")
-		if len(host)==0: errs.append("host not entered")
-		if len(port)==0: errs.append("port not entered")
-		if not is_integer(port):
-			if port!= "": errs.append(f"invalid port \"{port}\"")
-		if len(errs)>0:
-			msg = QMessageBox()
-			msg.setWindowIcon(QIcon(QUIRC_ICON))
-			msg.setIcon(QMessageBox.Critical)
-			msg.setText("Missing or Invalid Input")
-			es = ""
-			for e in errs: es = es + f"<li>{e}</li>"
-			msg.setInformativeText(f"<ul>{es}</ul>")
-			msg.setWindowTitle("Can't connect to IRC")
-			msg.exec_()
-			return
-
-		# Save server information
-		if use_ssl==1:
-			save_last_server( host, port, password, True )
-		else:
-			save_last_server( host, port, password, False )
-
-		# Save user information
-		user = {
-			"nick": str(nick),
-			"username": str(username),
-			"realname": str(realname)
-		}
-		save_user(user)
-
-		self.host = host
-		self.port = port
-		self.server = f"{self.host}:{self.port}"
-
-		# If we're already connected to a server, disconnect
-		if self.is_connected:
-			self.doDisconnect()
-
-		self.clientIsConnecting()
-
-		self.nickname = nick
-
-		if use_ssl == 1:
-			if password != '':
-				connectSSL(host,int(port),nick,username,realname,self,password)
-			else:
-				connectSSL(host,int(port),nick,username,realname,self,None)
-		else:
-			if password != '':
-				connect(host,int(port),nick,username,realname,self,password)
-			else:
-				connect(host,int(port),nick,username,realname,self,None)
+		self.connectToIRC(connection_info)
 
 	def doNetworkDialog(self):
 
@@ -429,71 +433,7 @@ class GUI(QMainWindow):
 		# User cancled dialog
 		if not connection_info: return
 
-		nick = connection_info[0]
-		username = connection_info[1]
-		realname = connection_info[2]
-		host = connection_info[3]
-		port = connection_info[4]
-		password = connection_info[5]
-		use_ssl = connection_info[6]
-
-		# Sanity check
-		errs = []
-		if len(nick)==0: errs.append("nickname not entered")
-		if len(username)==0: errs.append("username not entered")
-		if len(realname)==0: errs.append("real name not entered")
-		if len(host)==0: errs.append("host not entered")
-		if len(port)==0: errs.append("port not entered")
-		if not is_integer(port):
-			if port!= "": errs.append(f"invalid port \"{port}\"")
-		if len(errs)>0:
-			msg = QMessageBox()
-			msg.setWindowIcon(QIcon(QUIRC_ICON))
-			msg.setIcon(QMessageBox.Critical)
-			msg.setText("Missing or Invalid Input")
-			es = ""
-			for e in errs: es = es + f"<li>{e}</li>"
-			msg.setInformativeText(f"<ul>{es}</ul>")
-			msg.setWindowTitle("Can't connect to IRC")
-			msg.exec_()
-			return
-
-		# Save server information
-		if use_ssl==1:
-			save_last_server( host, port, password, True )
-		else:
-			save_last_server( host, port, password, False )
-
-		# Save user information
-		user = {
-			"nick": str(nick),
-			"username": str(username),
-			"realname": str(realname)
-		}
-		save_user(user)
-
-		self.host = host
-		self.port = port
-		self.server = f"{self.host}:{self.port}"
-
-		# If we're already connected to a server, disconnect
-		if self.is_connected:
-			self.doDisconnect()
-
-		self.clientIsConnecting()
-
-		self.nickname = nick
-
-		if use_ssl == 1:
-			if password != '':
-				connectSSL(host,int(port),nick,username,realname,self,password)
-			else:
-				connectSSL(host,int(port),nick,username,realname,self,None)
-		else:
-			if password != '':
-				connect(host,int(port),nick,username,realname,self,password)
-			else:
-				connect(host,int(port),nick,username,realname,self,None)
+		self.connectToIRC(connection_info)
 
 	# Windows
 
@@ -593,7 +533,6 @@ class GUI(QMainWindow):
 			self.irc.startHeartbeat()
 
 		# Autojoin channels
-		self.autojoin = get_autojoins()
 		for c in self.autojoin:
 			p = c.split("/")
 			if len(p)==2:
