@@ -112,6 +112,8 @@ LOGO_IMAGE = ":/logo.png"
 QT_IMAGE = ":/qt.png"
 GPL_IMAGE = ":/gpl.png"
 PYTHON_IMAGE = ":/python.png"
+TWISTED_IMAGE = ":/twisted.png"
+ICONS8_IMAGE = ":/icons8.png"
 
 #Objects
 

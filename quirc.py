@@ -107,6 +107,8 @@ class GUI(QMainWindow):
 
 		self.autojoin = []
 
+		self.serverWindowHidden = False
+
 		self.colors = load_colors()
 
 		self.setWindowTitle(f"{APPLICATION_NAME}")
@@ -156,6 +158,7 @@ class GUI(QMainWindow):
 		if QUIRC_HOTKEY_DISCONNECT != None: self.actDisconnect.setShortcut(QUIRC_HOTKEY_DISCONNECT)
 		ircMenu.addAction(self.actDisconnect)
 		self.actDisconnect.setEnabled(False)
+		self.actDisconnect.setVisible(False)
 
 		ircMenu.addSeparator()
 
@@ -226,6 +229,16 @@ class GUI(QMainWindow):
 		self.windows[w].window.showNormal()
 		self.windows[w].window.userTextInput.setFocus()
 
+	def showServerWindow(self):
+		self.windows[self.server].subwindow.show()
+		self.serverWindowHidden = False
+		self.rebuildWindowMenu()
+
+	def hideServerWindow(self):
+		self.windows[self.server].subwindow.hide()
+		self.serverWindowHidden = True
+		self.rebuildWindowMenu()
+
 	def rebuildWindowMenu(self):
 
 		self.winMenu.clear()
@@ -238,25 +251,46 @@ class GUI(QMainWindow):
 		actTile.triggered.connect(self.tileWindows)
 		self.winMenu.addAction(actTile)
 
+		if self.serverWindowHidden:
+			actServHide = QAction(QIcon(NEW_WINDOW_ICON),"Show Server Window",self)
+			actServHide.triggered.connect(self.showServerWindow)
+			self.winMenu.addAction(actServHide)
+		else:
+			actServHide = QAction(QIcon(NEW_WINDOW_ICON),"Hide Server Window",self)
+			actServHide.triggered.connect(self.hideServerWindow)
+			self.winMenu.addAction(actServHide)
+
 		self.winMenu.addSeparator()
+
+		numwin = 0
 
 		for w in self.windows:
 
+			numwin += 1
+
 			if w==self.server:
+				if self.serverWindowHidden: continue
 				self.winMenu.addAction(QIcon(SERVER_ICON),w, functools.partial(self.raiseWindow, w))
 			elif '#' in w:
 				self.winMenu.addAction(QIcon(CHANNEL_ICON),w, functools.partial(self.raiseWindow, w))
 			else:
 				self.winMenu.addAction(QIcon(USER_ICON),w, functools.partial(self.raiseWindow, w))
 
+		if numwin==0:
+			actCascade.setEnabled(False)
+			actTile.setEnabled(False)
+			actServHide.setEnabled(False)
+
 	def doDisconnect(self):
 		if self.irc != None:
 			self.irc.quit(f"{APPLICATION_NAME} {APPLICATION_VERSION}")
 
-			for w in self.windows:
-				self.windows[w].subwindow.close()
+		for w in self.windows:
+			self.windows[w].subwindow.close()
 
-			self.windows = {}
+		self.windows = {}
+		self.serverWindowHidden = False
+		self.rebuildWindowMenu()
 
 	def writeToAllWindows(self,txt):
 		for w in self.windows:
@@ -448,7 +482,7 @@ class GUI(QMainWindow):
 
 	def doAbout(self):
 		x = QMdiSubWindow()
-		x.setWidget(AboutDialog.Dialog())
+		x.setWidget(AboutDialog.Dialog(self))
 		x.setWindowFlags(
 			Qt.WindowCloseButtonHint |
 			Qt.WindowTitleHint )
@@ -476,12 +510,11 @@ class GUI(QMainWindow):
 
 		newChan.subwindow.resize(INITIAL_WINDOW_SIZE_WIDTH,INITIAL_WINDOW_SIZE_HEIGHT)
 
-		#newChan.window.show()
-		newChan.subwindow.show()
-
 		self.windows[channel] = newChan
 
 		self.rebuildWindowMenu()
+
+		newChan.subwindow.show()
 
 	def cascadeWindows(self):
 		self.MDI.cascadeSubWindows()
@@ -509,9 +542,15 @@ class GUI(QMainWindow):
 
 	def connected(self):
 		self.clientIsConnected()
+
 		self.actDisconnect.setEnabled(True)
+		self.actDisconnect.setVisible(True)
+
 		self.actConnect.setEnabled(False)
 		self.actNetwork.setEnabled(False)
+		self.actConnect.setVisible(False)
+		self.actNetwork.setVisible(False)
+
 		self.actJoin.setEnabled(True)
 		self.actNick.setEnabled(True)
 		self.optAlive.setEnabled(True)
@@ -524,9 +563,15 @@ class GUI(QMainWindow):
 
 	def disconnected(self):
 		self.clientIsDisconnected()
+
 		self.actDisconnect.setEnabled(False)
+		self.actDisconnect.setVisible(False)
+
 		self.actConnect.setEnabled(True)
 		self.actNetwork.setEnabled(True)
+		self.actConnect.setVisible(True)
+		self.actNetwork.setVisible(True)
+
 		self.actJoin.setEnabled(False)
 		self.actNick.setEnabled(False)
 		self.optAlive.setEnabled(False)

@@ -11,6 +11,9 @@ Version 0.22
 	* Added command history to chat windows
 	* Added /msg, /join, /me, /notice, and /whois commands
 	* Centered the "about" dialog
+	* Added the ability to hide/show the server status window
+	* New logo
+	# New "about" dialog
 
 Version 0.10
 	* Re-factored Quircclient

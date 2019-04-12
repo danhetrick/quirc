@@ -29,8 +29,16 @@ class Dialog(QDialog):
 
 		self.parent = parent
 
-		self.setWindowTitle(f"About {APPLICATION_NAME}")
-		self.setWindowIcon(QIcon(ABOUT_ICON))
+		#self.setWindowTitle(f"About {APPLICATION_NAME}")
+		self.setWindowIcon(QIcon(QUIRC_ICON))
+
+		boldfont = self.font()
+		boldfont.setBold(True)
+		boldfont.setPointSize(12)
+
+		boldsmaller = self.font()
+		boldsmaller.setBold(True)
+		boldsmaller.setPointSize(8)
 
 		logo = QLabel()
 		pixmap = QPixmap(LOGO_IMAGE)
@@ -52,32 +60,97 @@ class Dialog(QDialog):
 		gpl_image.setPixmap(pixmap)
 		gpl_image.setAlignment(Qt.AlignCenter)
 
-		technology = QHBoxLayout()
-		technology.addWidget(python_image)
-		technology.addWidget(gpl_image)
-		technology.addWidget(qt_image)
+		twisted_image = QLabel()
+		pixmap = QPixmap(TWISTED_IMAGE)
+		twisted_image.setPixmap(pixmap)
+		twisted_image.setAlignment(Qt.AlignCenter)
 
-		dinfo = QLabel(f"A Python/Qt Internet Relay Chat Client")
+		icons8_image = QLabel()
+		pixmap = QPixmap(ICONS8_IMAGE)
+		icons8_image.setPixmap(pixmap)
+		icons8_image.setAlignment(Qt.AlignCenter)
+
+		
+
+		pyBox = QVBoxLayout()
+		pyBox.addWidget(python_image)
+		pyLink = QLabel("<a href=\"https://www.python.org/\">Python</a>")
+		pyLink.setAlignment(Qt.AlignCenter)
+		pyBox.addWidget(pyLink)
+		pyLink.setFont(boldsmaller)
+		pyLink.setOpenExternalLinks(True)
+
+
+		gplBox = QVBoxLayout()
+		gplBox.addWidget(gpl_image)
+		gplLink = QLabel("<a href=\"https://www.gnu.org/\">Gnu</a>")
+		gplLink.setAlignment(Qt.AlignCenter)
+		gplBox.addWidget(gplLink)
+		gplLink.setFont(boldsmaller)
+		gplLink.setOpenExternalLinks(True)
+
+		qtBox = QVBoxLayout()
+		qtBox.addWidget(qt_image)
+		qtLink = QLabel("<a href=\"https://www.qt.io/\">Qt</a>")
+		qtLink.setAlignment(Qt.AlignCenter)
+		qtBox.addWidget(qtLink)
+		qtLink.setFont(boldsmaller)
+		qtLink.setOpenExternalLinks(True)
+
+		twistBox = QVBoxLayout()
+		twistBox.addWidget(twisted_image)
+		twistLink = QLabel("<a href=\"https://twistedmatrix.com\">Twisted</a>")
+		twistLink.setAlignment(Qt.AlignCenter)
+		twistBox.addWidget(twistLink)
+		twistLink.setFont(boldsmaller)
+		twistLink.setOpenExternalLinks(True)
+
+		icons8Box = QVBoxLayout()
+		icons8Box.addWidget(icons8_image)
+		icons8Link = QLabel("<a href=\"https://icons8.com/\">Icons8</a>")
+		icons8Link.setAlignment(Qt.AlignCenter)
+		icons8Box.addWidget(icons8Link)
+		icons8Link.setFont(boldsmaller)
+		icons8Link.setOpenExternalLinks(True)
+
+		technology = QHBoxLayout()
+		technology.addLayout(pyBox)
+		technology.addLayout(twistBox)
+		technology.addLayout(icons8Box)
+		technology.addLayout(qtBox)
+		technology.addLayout(gplBox)
+
+
+		# technology = QVBoxLayout()
+		# technology.addLayout(technology1)
+		# technology.addLayout(gplBox)
+
+
+		dinfo = QLabel(f"Open Source Internet Relay Chat Client")
 		dinfo.setAlignment(Qt.AlignCenter)
+		dinfo.setFont(boldfont)
 
 		ainfo = QLabel(f"Version {APPLICATION_VERSION}")
 		ainfo.setAlignment(Qt.AlignCenter)
+		ainfo.setFont(boldfont)
 
-		ilink = QLabel("<a href=\"https://github.com/danhetrick\">https://github.com/danhetrick</a>")
+		ilink = QLabel("<a href=\"https://github.com/danhetrick/quirc\">Quirc GitHub Repository</a>")
 		ilink.setAlignment(Qt.AlignCenter)
 		ilink.setOpenExternalLinks(True)
+		ilink.setFont(boldsmaller)
 
-		irclib = QLabel("<a href=\"https://twistedmatrix.com\">Twisted</a> by Twisted Matrix Labs")
-		irclib.setAlignment(Qt.AlignCenter)
-		irclib.setOpenExternalLinks(True)
+		# irclib = QLabel("<a href=\"https://twistedmatrix.com\">Twisted</a> by Twisted Matrix Labs")
+		# irclib.setAlignment(Qt.AlignCenter)
+		# irclib.setOpenExternalLinks(True)
 
 		colourlib = QLabel("<a href=\"https://github.com/vaab/colour\">Python Colour Library</a> by Valentin Lab")
 		colourlib.setAlignment(Qt.AlignCenter)
 		colourlib.setOpenExternalLinks(True)
+		colourlib.setFont(boldsmaller)
 
-		icons = QLabel("Icons by <a href=\"https://icons8.com/icons\">Icons8</a>")
-		icons.setAlignment(Qt.AlignCenter)
-		icons.setOpenExternalLinks(True)
+		# icons = QLabel("Icons by <a href=\"https://icons8.com/icons\">Icons8</a>")
+		# icons.setAlignment(Qt.AlignCenter)
+		# icons.setOpenExternalLinks(True)
 
 		spacer = QLabel(" ")
 
@@ -85,16 +158,20 @@ class Dialog(QDialog):
 		finalLayout.addWidget(logo)
 		finalLayout.addWidget(dinfo)
 		finalLayout.addWidget(ainfo)
-		finalLayout.addWidget(spacer)
-		finalLayout.addWidget(irclib)
-		finalLayout.addWidget(colourlib)
-		finalLayout.addWidget(icons)
-		finalLayout.addWidget(spacer)
+		#finalLayout.addWidget(spacer)
+		#finalLayout.addWidget(irclib)
+		#finalLayout.addWidget(icons)
+		#finalLayout.addWidget(spacer)
 		finalLayout.addLayout(technology)
-		finalLayout.addWidget(spacer)
+		finalLayout.addWidget(colourlib)
 		finalLayout.addWidget(ilink)
+		#finalLayout.addLayout(gplBox)
+		#finalLayout.addWidget(spacer)
+		
 
 		self.setWindowFlags(self.windowFlags()
                     ^ QtCore.Qt.WindowContextHelpButtonHint)
 
 		self.setLayout(finalLayout)
+
+		self.setFixedSize(400, 300)
